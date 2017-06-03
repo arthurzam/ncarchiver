@@ -34,6 +34,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
             temp->name = strdup(start);
             temp->items = 0;
             temp->flags = NODE_ISDIR;
+            temp->moreInfo = NULL;
 
             if (root->subs)
                 root->subs->prev = temp;
@@ -56,6 +57,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
         temp->next = root->subs;
         temp->name = strdup(start);
         temp->flags = 0;
+        temp->moreInfo = NULL;
 
         if (root->subs)
             root->subs->prev = temp;
@@ -68,6 +70,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
 void filetree_free(struct dir_t *root)
 {
     struct dir_t *node, *next;
+    struct dir_more_info_t *moreInfo;
     if (!root)
         return;
 
@@ -75,6 +78,12 @@ void filetree_free(struct dir_t *root)
     {
         next = node->next;
         free(node->name);
+        if (node->moreInfo)
+        {
+            for (moreInfo = node->moreInfo; moreInfo->key; ++moreInfo)
+                free(moreInfo->value);
+            free(node->moreInfo);
+        }
         node->name = NULL;
         filetree_free(node);
     }

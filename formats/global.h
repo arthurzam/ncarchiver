@@ -14,10 +14,10 @@ struct dir_t {
     struct dir_t *parent, *prev, *next, *subs;
     // more data ptr
     char *name;
+    struct dir_more_info_t *moreInfo;
     int flags;
     int realSize, compressSize;
-	int items;
-    struct dir_more_info_t moreInfo[1];
+    int items;
 };
 
 enum DirFlags {
@@ -32,6 +32,7 @@ struct archive_t {
     const struct format_t *format;
 	char *path;
     char *password;
+    char *comment;
 	uint8_t flags;
     uint8_t error;
 };
@@ -53,6 +54,7 @@ struct format_t {
     struct archive_t *(*openArchive)(const struct format_t *format, char *path) __attribute__ ((__nonnull__ (1,2)));
     bool (*closeArchive)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
     struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
+    bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__ (1,2,3)));
     uint8_t flags;
 };
 

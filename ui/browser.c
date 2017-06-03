@@ -4,6 +4,8 @@
 
 #include <string.h>
 #include <stdlib.h>
+
+#include <unistd.h>
 #include <ncurses.h>
 
 
@@ -83,9 +85,8 @@ void browse_draw() {
   /* move cursor to selected row for accessibility */
 }
 
-
-int browse_key(int ch) {
-
+int browse_key(int ch)
+{
     switch (ch)
     {
         case KEY_UP:
@@ -103,6 +104,7 @@ int browse_key(int ch) {
             break;
         case '\n':
         case KEY_ENTER:
+        case KEY_RIGHT:
             if (selected->flags & NODE_ISDIR)
             {
                 curr = selected;
@@ -117,8 +119,7 @@ int browse_key(int ch) {
             quit_init();
             break;
     }
-
-  return 0;
+    return 0;
 }
 
 
@@ -126,5 +127,6 @@ void browse_init(struct dir_t *par) {
   pstate = ST_BROWSE;
   message = NULL;
   curr = par;
+  selected = filetree_sort(curr->subs);
 }
 

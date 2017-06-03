@@ -46,5 +46,6 @@ int input_handle(int);
 #include "util.h"
 //#include "shell.h"
 #include "quit.h"
+#include "inputtext.h"
 
 #endif // GLOBAL_UI_H

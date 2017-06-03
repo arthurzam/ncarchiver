@@ -17,6 +17,7 @@ struct archive_t *format_default_openArchive(const struct format_t *format, char
 bool format_default_closeArchive(struct archive_t *archive)
 {
     filetree_free(archive->dir);
+    free(archive->comment);
     free(archive);
     return true;
 }

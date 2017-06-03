@@ -103,7 +103,7 @@ static bool libarchive_closeArchive(struct archive_t *_archive)
     return format_default_closeArchive(_archive);
 }
 
-struct format_t libarchiveFormat = {
+static struct format_t libarchiveFormat = {
     .name = "libarchive",
     .openArchive = libarchive_openArchive,
     .listFiles = libarchive_listFiles,

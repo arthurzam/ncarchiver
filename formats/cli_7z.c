@@ -66,6 +66,8 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     regex_t re;
     regmatch_t matches[10];
     int i;
+    char *comment = NULL;
+    size_t arr_size = 0, arr_len = 0;
 
     char line[2048 + 1];
     line[sizeof(line) - 1] = '\0';
@@ -102,7 +104,11 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     archive->error = ARCHIVE_ERROR_BAD_PASSWORD;
                     return NULL;
                 }
-                // else if () // TODO: check error as in Ark/7z:148
+                else if (NULL != strstr(line, "Error: "))
+                {
+                    fprintf(stderr, "7z: error parsing header: %s\n", line + 7);
+                    return NULL;
+                }
                 break;
             case 2: // parse archive information
                 if (0 == strcmp(line, "----------"))
@@ -113,20 +119,46 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     fprintf(stderr, "7z: method: %s\n", line + 9);
                 else if (strstartswith(line, "Comment = "))
                 {
-                    fprintf(stderr, "7z: comment: %s\n", line + 10);
+                    arr_len = strlen(line + 10);
+                    comment = (char *)malloc(arr_size = arr_len + arr_len / 2);
+                    memcpy(comment, line + 10, arr_len);
+                    comment[arr_len] = '\n';
+                    comment[++arr_len] = '\0';
                     state = 3;
                 }
                 break;
             case 3: // parse comment
+                if (0 == strcmp(line, "----------"))
+                    state = 4;
+                else
+                {
+                    size_t addlen = strlen(line);
+                    if (arr_len + addlen + 10 >= arr_size)
+                        comment = realloc(comment, arr_size += (addlen + 10));
+                    strcat(comment, line);
+                    strcat(comment, "\n");
+                }
                 break;
             case 4: // parse entry information
                 if (!root)
                     root = filetree_createRoot();
 
                 if (strstartswith(line, "Path = "))
+                {
                     temp = filetree_addNode(root, line + 7);
+                    arr_size = arr_len = 0;
+                }
                 else if (strstartswith(line, "Size = "))
                     temp->realSize = atoi(line + 7);
+                else if (strstartswith(line, "CRC = "))
+                {
+                    if (line[6] == '\0') break;
+                    if (arr_size < arr_len + 1)
+                        temp->moreInfo = (struct dir_more_info_t *)realloc(temp->moreInfo, sizeof(struct dir_more_info_t) * (arr_size += 3));
+                    temp->moreInfo[arr_len].key = "CRC";
+                    temp->moreInfo[arr_len].value = strdup (line + 6);
+                    temp->moreInfo[++arr_len].key = NULL;
+                }
                 else if (strstartswith(line, "Encrypted = "))
                 {
                     if (0 == strcmp(line + 12, "+"))
@@ -134,17 +166,19 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 }
 //                else if (strstartswith(line, "Modified = "))
 //                {
+                        // Link: https://stackoverflow.com/a/3054052
 //                    fprintf(stderr, "7z: file %s modified date %s\n", temp->name, asctime(mktime_from_string(line + 11)));
 //                }
                 break;
 
         }
     }
+    archive->comment = comment;
 
     return root;
 }
 
-struct cli_format_t cli_7z_proc = {
+static struct cli_format_t cli_7z_proc = {
     .parent = {
         .name = "cli 7z",
         .mime_types_rw = _7z_mimes,

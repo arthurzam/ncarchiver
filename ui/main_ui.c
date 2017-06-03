@@ -60,6 +60,20 @@ int main(/*int argc, char *argv[]*/)
 #include <unistd.h>
 #include <sys/time.h>
 
+#include <xdgmime/xdgmime.h>
+
+#define section_foreach_entry(section_name, type_t, elem)     \
+     for (type_t *elem =                                      \
+            ({                                                \
+                extern type_t __start_##section_name;         \
+                &__start_##section_name;                      \
+            });                                               \
+            elem !=                                           \
+            ({                                                \
+                extern type_t __stop_##section_name;          \
+                &__stop_##section_name;                       \
+            });                                               \
+            ++elem)
 
 int pstate = ST_BROWSE;
 int read_only = 0;
@@ -188,16 +202,31 @@ static void init_nc()
         min_rows = min_cols = 0;
 }
 
-
-extern struct cli_format_t cli_7z_proc;
-struct dir_t *curr, *selected;
 /* main program */
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
+    struct format_t *format = NULL;
+    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"/*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/ui/archive.7z"*/;
+    const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
+    const char *const *ptr;
+    printf("mime is %s\n", mime);
+    section_foreach_entry(format_array, struct format_t *, iter)
+    {
+        if ((*iter)->mime_types_rw)
+            for(ptr = (*iter)->mime_types_rw; *ptr; ++ptr)
+                if (0 == strcmp(*ptr, mime))
+                {
+                    format = *iter;
+                    break;
+                }
+        if (format)
+            break;
+    }
 
-    struct archive_t *arc = cli_7z_proc.parent.openArchive(&cli_7z_proc.parent, argc > 1 ? argv[1] : "/home/arthur/dev/build-ncarchiver-Desktop-Debug/ui/archive.7z");
-    //arc->password = "1234";
-    curr = arc->dir = cli_7z_proc.parent.listFiles(arc);
-    selected = filetree_sort(curr->subs);
+    struct archive_t *arc = format->openArchive(format, path);
+    arc->password = "1234";
+    arc->dir = format->listFiles(arc);
+    browse_init(arc->dir);
   read_locale();
 //  argv_parse(argc, argv);
 
@@ -216,7 +245,7 @@ int main(int argc, char **argv) {
   }
 //  exclude_clear();
 
-  cli_7z_proc.parent.closeArchive(arc);
+  format->closeArchive(arc);
   return 0;
 }
 

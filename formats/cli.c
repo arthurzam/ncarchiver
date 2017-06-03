@@ -1,5 +1,3 @@
-#define _GNU_SOURCE
-
 #include "cli.h"
 #include "filetree.h"
 
@@ -133,7 +131,11 @@ static char **cli_passwordArray(struct archive_t *_archive)
     char **passArgv = (char **)malloc(sizeof(char *) * (1 + size));
     for (i = 0; i < size; i++)
     {
-        asprintf(passArgv + i, cli_format->passwordSwitch[i], _archive->password);
+        if (-1 == asprintf(passArgv + i, cli_format->passwordSwitch[i], _archive->password))
+        {
+            fputs("Error with asprintf", stderr);
+            abort();
+        }
     }
     passArgv[size] = NULL;
     return passArgv;
