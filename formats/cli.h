@@ -22,7 +22,7 @@ enum CLI_USE {
 struct cli_format_t {
     struct format_t parent;
 
-    char **cmds;
+    const char *const *cmds;
     const uint8_t *cmds_uses;
 
     const char **addSwitch;
@@ -32,12 +32,22 @@ struct cli_format_t {
 
     const char **passwordSwitch;
 
+    const char *const *errorWrongPassword;
+    const char *const *errorCorruptedArchive;
+    const char *const *errorFullDisk;
+    const char *const *fileExistsPatterns;
+    const char *const *fileExistsFileName;
+    const char *fileExistsInput[5];
+
     struct dir_t *(*processList)(struct archive_t *archive, FILE *inF, FILE *outF) __attribute__ ((__nonnull__ (1,2,3)));
+    int (*processLine)(struct archive_t *archive, const char *line) __attribute__ ((__nonnull__ (1,2)));
 };
 
-char *getCmdPath(const char *cmd) __attribute__((malloc));
+char *getCmdPath(const char *cmd) __attribute__((malloc)) __attribute__ ((__nonnull__ (1)));
 
 struct dir_t *cli_listFiles(struct archive_t *_archive);
+bool cli_extractFiles(struct archive_t *archive, const char *const *files, const char *destinationFolder);
+bool cli_deleteFiles(struct archive_t *archive, const char *const *files);
 
 #define strstartswith(str, prefix) (strncmp(prefix, str, strlen(prefix)) == 0)
 

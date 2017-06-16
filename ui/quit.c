@@ -2,18 +2,20 @@
 
 #include <ncurses.h>
 
-int quit_key(int ch) {
+int quit_key(int index, int ch) {
+    (void)index;
     switch(ch) {
         case 'y':
         case 'Y':
             return 1;
         default:
-            pstate = ST_BROWSE;
+            return 2;
     }
     return 0;
 }
 
-void quit_draw() {
+void quit_draw(int index) {
+    (void)index;
     // browse_draw();
 
     nccreate(4,30, "ncdu confirm quit");
@@ -21,5 +23,5 @@ void quit_draw() {
 }
 
 void quit_init() {
-    pstate = ST_QUIT;
+    ui_insert(quit_draw, quit_key, NULL);
 }

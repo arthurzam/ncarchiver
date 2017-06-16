@@ -11,8 +11,10 @@
 
 // static int graph = 1, show_as = 0, info_show = 0, info_page = 0, info_start = 0, show_items = 0;
 static char *message = NULL;
-struct dir_t *curr, *selected;
+static struct dir_t *curr, *selected;
 
+static struct dir_t **selected_array = NULL;
+static unsigned selected_size = 0;
 
 
 
@@ -45,48 +47,50 @@ static void browse_draw_item(struct dir_t *n, int row) {
 }
 
 
-void browse_draw() {
-  struct dir_t *t;
-  char *tmp;
-  int i = 2;
+static void browse_draw(int index) {
+    (void)index;
+    struct dir_t *t;
+    char *tmp;
+    int i = 2;
 
-  erase();
-  t = curr;
+    erase();
+    t = curr;
 
-  /* top line - basic info */
-  attron(A_REVERSE);
-  mvhline(0, 0, ' ', wincols);
-  mvhline(winrows-1, 0, ' ', wincols);
-  mvprintw(0,0,"%s %s ~ Use the arrow keys to navigate, press ? for help", "PACKAGE_NAME", "PACKAGE_VERSION");
-  attroff(A_REVERSE);
+    /* top line - basic info */
+    attron(A_REVERSE);
+    mvhline(0, 0, ' ', wincols);
+    mvhline(winrows-1, 0, ' ', wincols);
+    mvprintw(0,0,"%s %s ~ Use the arrow keys to navigate, press ? for help", PACKAGE_NAME, PACKAGE_VERSION);
+    attroff(A_REVERSE);
 
-  /* second line - the path */
-  mvhline(1, 0, '-', wincols);
+    /* second line - the path */
+    mvhline(1, 0, '-', wincols);
     mvaddch(1, 3, ' ');
     tmp = filetree_getpath(curr);
     mvaddstr(1, 4, cropstr(tmp, wincols-8));
     mvaddch(1, 4+((int)strlen(tmp) > wincols-8 ? wincols-8 : (int)strlen(tmp)), ' ');
 
-  /* nothing to display? stop here. */
-  if(!t)
-    return;
+    /* nothing to display? stop here. */
+    if(!t)
+        return;
 
-  /* get start position */
-  t = curr->subs;
+    /* get start position */
+    t = curr->subs;
 
-  if (curr->parent)
-    browse_draw_item(curr->parent, i++);
+    if (curr->parent)
+        browse_draw_item(curr->parent, i++);
 
-  /* print the list to the screen */
-  for(; t && i < winrows - 3; t = t->next, i++) {
-    browse_draw_item(t, i);
-  }
+    /* print the list to the screen */
+    for(; t && i < winrows - 3; t = t->next, i++) {
+        browse_draw_item(t, i);
+    }
 
-  /* move cursor to selected row for accessibility */
+    /* move cursor to selected row for accessibility */
 }
 
-int browse_key(int ch)
+static int browse_key(int index, int ch)
 {
+    (void)index;
     switch (ch)
     {
         case KEY_UP:
@@ -113,10 +117,45 @@ int browse_key(int ch)
             break;
         case ' ':
             if (selected != curr->parent)
+            {
                 selected->flags ^= NODE_SELECTED;
+                if (selected->flags & NODE_SELECTED)
+                {
+                    selected_array = realloc(selected_array, sizeof(struct dir_t *) * (++selected_size));
+                    selected_array[selected_size - 1] = selected;
+                }
+                else
+                {
+                    unsigned i = 0;
+                    for (; selected_array[i] != selected; ++i);
+                    for (++i; i < selected_size; ++i)
+                        selected_array[i - 1] = selected_array[i];
+                    selected_array = realloc(selected_array, sizeof(struct dir_t *) * (--selected_size));
+                }
+            }
             break;
         case 'q':
+        case 'Q':
             quit_init();
+            break;
+        case 'o':
+        case 'O':
+        {
+            unsigned i;
+            char **path = (char**)malloc(sizeof(char *) * (selected_size + 1));
+            for (i = 0; i < selected_size; ++i)
+                path[i] = strdup(filetree_getpath(selected_array[i]) + 1);
+            path[selected_size] = NULL;
+
+            char dTemplate[] = "/tmp/.-ncark-XXXXXX";
+            mkdtemp(dTemplate);
+
+            arc->format->extractFiles(arc, (const char *const *)path, "/tmp" /*dTemplate*/);
+
+            for (i = 0; i < selected_size; ++i)
+                free(path[i]);
+            free(path);
+        }
             break;
     }
     return 0;
@@ -124,7 +163,7 @@ int browse_key(int ch)
 
 
 void browse_init(struct dir_t *par) {
-  pstate = ST_BROWSE;
+    ui_insert(browse_draw, browse_key, NULL);
   message = NULL;
   curr = par;
   selected = filetree_sort(curr->subs);

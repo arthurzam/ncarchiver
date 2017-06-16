@@ -37,6 +37,9 @@ int winrows, wincols;
 int subwinr, subwinc;
 int si;
 char thou_sep;
+ui_draw_func_t ui_draw_funcs[UI_MAX_DEPTH] = {NULL};
+ui_key_func_t  ui_key_funcs [UI_MAX_DEPTH] = {NULL};
+void         * ui_data      [UI_MAX_DEPTH] = {NULL};
 
 
 char *cropstr(const char *from, int s) {
@@ -201,4 +204,23 @@ void addparentstats(struct dir_t *d, int64_t size, int64_t asize, int items) {
     d->items += items;
     d = d->parent;
   }
+}
+
+int ui_insert(ui_draw_func_t draw, ui_key_func_t key, void *data) {
+    int i;
+    for (i = 0; ui_draw_funcs[i] != NULL; ++i);
+    ui_draw_funcs[i] = draw;
+    ui_data[i] = data;
+    ui_key_funcs[i] = key;
+    return i;
+}
+
+void *ui_remove() {
+    int i;
+    for (i = 0; ui_draw_funcs[i] != NULL; ++i);
+    ui_draw_funcs[i - 1] = NULL;
+    void *data = ui_data[i - 1];
+    ui_data[i - 1] = NULL;
+    ui_key_funcs[i - 1] = NULL;
+    return data;
 }

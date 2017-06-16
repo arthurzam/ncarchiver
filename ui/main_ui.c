@@ -1,54 +1,5 @@
-#if 0
-#include <stdio.h>
-
-#include "global.h"
-#include "filetree.h"
-
-#include <xdgmime.h>
-
-#define section_foreach_entry(section_name, type_t, elem)     \
-     for (type_t *elem =                                      \
-            ({                                                \
-                extern type_t __start_##section_name;         \
-                &__start_##section_name;                      \
-            });                                               \
-            elem !=                                           \
-            ({                                                \
-                extern type_t __stop_##section_name;          \
-                &__stop_##section_name;                       \
-            });                                               \
-            ++elem)
-
-void outputAll(struct dir_t *dir)
-{
-    if (!dir) return;
-    puts(filetree_getpath(dir));
-    for (struct dir_t *node = dir->subs; node; node = node->next)
-        outputAll(node);
-}
-
-int main(/*int argc, char *argv[]*/)
-{
-    printf("%s\n", xdg_mime_get_mime_type_for_file("/home/arthur/dev/firefox-QMPlay2.tar", NULL));
-    section_foreach_entry(format_array, struct format_t *, iter)
-    {
-        printf("module %s\n", (*iter)->name);
-        struct archive_t *arc = (*iter)->openArchive((*iter), "/home/arthur/dev/firefox-QMPlay2.tar");
-        arc->dir = (*iter)->listFiles(arc);
-        outputAll(arc->dir);
-        puts("******************");
-        filetree_sort(arc->dir->subs->subs);
-        outputAll(arc->dir);
-        puts("******************");
-        (*iter)->closeArchive(arc);
-    }
-    return 0;
-}
-
-#else
-
-
 #include "global_ui.h"
+#include "browser.h"
 #include "filetree.h"
 #include "cli.h"
 
@@ -75,7 +26,6 @@ int main(/*int argc, char *argv[]*/)
             });                                               \
             ++elem)
 
-int pstate = ST_BROWSE;
 int read_only = 0;
 long update_delay = 100;
 int cachedir_tags = 0;
@@ -88,14 +38,9 @@ static long lastupdate = 999;
 
 
 static void screen_draw() {
-    switch(pstate) {
-        //case ST_CALC:   dir_draw();    break;
-        case ST_BROWSE: browse_draw(); break;
-        //case ST_HELP:   help_draw();   break;
-        //case ST_SHELL:  shell_draw();  break;
-        //case ST_DEL:    delete_draw(); break;
-        case ST_QUIT:   quit_draw();   break;
-    }
+    int i;
+    for (i = 0; ui_draw_funcs[i] != NULL; ++i);
+    ui_draw_funcs[i - 1](i - 1);
 }
 
 
@@ -107,6 +52,7 @@ static void screen_draw() {
 int input_handle(int wait)
 {
     int ch;
+    int i;
     struct timeval tv;
 
     if (wait != 1)
@@ -138,19 +84,14 @@ int input_handle(int wait)
             screen_draw();
             continue;
         }
-        switch(pstate)
-        {
-            //case ST_CALC:   return dir_key(ch);
-            case ST_BROWSE: return browse_key(ch);
-            //case ST_HELP:   return help_key(ch);
-            //case ST_DEL:    return delete_key(ch);
-            case ST_QUIT:   return quit_key(ch);
-        }
-        screen_draw();
+        for (i = 0; ui_key_funcs[i] != NULL; ++i);
+        i = ui_key_funcs[i - 1](i - 1, ch);
+        if (i == 2)
+            free(ui_remove());
+        return i;
     }
     return 0;
 }
-
 
 /* parse command line */
 static void init_nc()
@@ -202,53 +143,97 @@ static void init_nc()
         min_rows = min_cols = 0;
 }
 
-/* main program */
-int main(int argc, char **argv)
+struct archive_t *arc;
+
+static const struct format_t *findFormat(const char *mime)
 {
-    struct format_t *format = NULL;
-    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"/*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/ui/archive.7z"*/;
-    const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
     const char *const *ptr;
-    printf("mime is %s\n", mime);
-    section_foreach_entry(format_array, struct format_t *, iter)
+    section_foreach_entry(format_array, const struct format_t *, iter)
     {
         if ((*iter)->mime_types_rw)
             for(ptr = (*iter)->mime_types_rw; *ptr; ++ptr)
                 if (0 == strcmp(*ptr, mime))
-                {
-                    format = *iter;
-                    break;
-                }
-        if (format)
-            break;
+                    return *iter;
     }
+    section_foreach_entry(format_array, const struct format_t *, iter)
+    {
+        if ((*iter)->mime_types_ro)
+            for(ptr = (*iter)->mime_types_ro; *ptr; ++ptr)
+                if (0 == strcmp(*ptr, mime))
+                    return *iter;
+    }
+    return NULL;
+}
 
-    struct archive_t *arc = format->openArchive(format, path);
-    arc->password = "1234";
-    arc->dir = format->listFiles(arc);
-    browse_init(arc->dir);
-  read_locale();
+FILE* loggerFile;
+#include <regex.h>
+
+/* main program */
+int main(int argc, char **argv)
+{
+//    regmatch_t matches[10];
+//    int i;
+//    regex_t re;
+//    i = regcomp(&re, "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit", REG_EXTENDED);
+//    char line[4096];
+//    line[4096]='\0';
+//    while (!feof(stdin))
+//    {
+//        fgets(line, 4095, stdin);
+//        i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
+//        printf("[%s] %s\n", line, i == REG_NOMATCH ? "no match" : "found");
+//    }
+//    return 0;
+
+
+
+
+
+    loggerFile = fopen("ncarchiver.log", "w");
+    read_locale();
 //  argv_parse(argc, argv);
 
 //  if(dir_ui == 2)
     init_nc();
 
-  while(1) {
-    if(input_handle(0))
-      break;
-  }
 
-  if(ncurses_init) {
-    erase();
-    refresh();
-    endwin();
-  }
-//  exclude_clear();
+    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip" /*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/ui/archive.7z"*/;
+    const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
+    printf("mime is %s\n", mime);
+    const struct format_t *format = findFormat(mime);
+    arc = format->openArchive(format, path);
+    arc->mime = mime;
+    arc->dir = format->listFiles(arc);
+    if(!arc->dir)
+    {
+        switch (arc->error)
+        {
+            case ARCHIVE_ERROR_BAD_PASSWORD:
+                arc->password = prompt_text("Password", "Enter password:");
+                if (!(arc->dir = format->listFiles(arc)))
+                {
+                    fprintf(stderr, "Bad Password\n");
+                    goto _exit;
+                }
+                break;
+        }
+    }
+    browse_init(arc->dir);
 
-  format->closeArchive(arc);
-  return 0;
+    while(input_handle(0) != 1);
+
+_exit:
+    if(ncurses_init)
+    {
+        erase();
+        refresh();
+        endwin();
+    }
+    //  exclude_clear();
+    format->closeArchive(arc);
+    fclose(loggerFile);
+    return 0;
 }
 
 
-#endif
 #endif

@@ -12,11 +12,21 @@
 
 #include <regex.h>
 
-static char *_7z_cmds[] = {"7z", NULL};
-static const uint8_t _7z_cmds_uses[] = {CLI_ALL};
+static const char *_7z_cmds[] = {"7z", "7za", "7zr", NULL};
+static const uint8_t _7z_cmds_uses[] = {CLI_ALL, CLI_ALL, CLI_ALL};
 static const char *_7z_addSwitch[] = {"a", "-l", NULL};
-static const char *_7z_listSwitch[] = {"l", "-slt", NULL};
+static const char *_7z_extractSwitch[] = {"x", NULL};
+static const char *_7z_delSwitch[] = {"d", "-bd", NULL};
+static const char *_7z_listSwitch[] = {"l", "-slt", "-bd", NULL};
 static const char *_7z_passwordSwitch[] = {"-p%s", NULL};
+
+static const char *_7z_errorWrongPassword[] = {"Wrong password", NULL};
+static const char *_7z_errorCorruptedArchive[] = {"Unexpected end of archive", "Headers Error", NULL};
+static const char *_7z_errorFullDisk[] = {"No space left on device", NULL};
+static const char *_7z_fileExistsPatterns[] = {
+    "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit",
+    NULL};
+static const char *_7z_fileExistsFileName[] = {"^file \\./(.*)$", "^  Path:     \\./(.*)$", NULL};
 
 static const char *_7z_mimes[] = {
     "application/x-7z-compressed",
@@ -24,38 +34,19 @@ static const char *_7z_mimes[] = {
     NULL
 };
 
-static time_t mktime_from_string (char *str)
-{
-    struct tm tm = {0, };
-    char *s = str, *e;
+//static struct tm *mktime_from_string (char *str) // YY-MM-DD hh:mm:ss
+//{
+//    static struct tm tm = {0, };
 
-    tm.tm_isdst = -1;
+//    tm.tm_isdst = -1;
 
-    /* date */
-    *(e = strchr(s, '-')) = '\0';
-    tm.tm_year = atoi(s) - 1900;
+//    sscanf(str, "%d-%d-%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
 
-    *(e = strchr(s = e + 1, '-')) = '\0';
-    tm.tm_mon = atoi(s) - 1;
+//    tm.tm_year -= 1900;
+//    tm.tm_mon  -= 1;
 
-    *(e = strchr(s = e + 1, ' ')) = '\0';
-    tm.tm_mday = atoi(s);
-
-    /* time */
-    if ((e = strchr(s = e + 1, ':')))
-        *e = '\0';
-    tm.tm_hour = atoi(s);
-    if (e)
-    {
-        if ((e = strchr(s = e + 1, ':')))
-            *e = '\0';
-        tm.tm_min = atoi(s);
-        if (e)
-            tm.tm_sec = atoi(e + 1);
-    }
-
-    return mktime(&tm);
-}
+//    return &tm;
+//}
 
 static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FILE *outF)
 {
@@ -66,7 +57,6 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     regex_t re;
     regmatch_t matches[10];
     int i;
-    char *comment = NULL;
     size_t arr_size = 0, arr_len = 0;
 
     char line[2048 + 1];
@@ -89,13 +79,13 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 {
                     state = 1;
                     line[matches[1].rm_eo] = '\0';
-                    fprintf(stderr, "7z: p7zip version %s detected\n", line + matches[1].rm_so);
+                    LOG_I("7z", "p7zip version %s detected", line + matches[1].rm_so);
                 }
                 regfree(&re);
                 break;
             case 1: // parse header
                 if (strstartswith(line, "Listing archive:"))
-                    fprintf(stderr, "7z: listing archive: %s\n", line + 16);
+                    LOG_I("7z", "listing archive: %s", line + 16);
                 else if (0 == strcmp(line, "--") || 0 == strcmp(line, "----"))
                     state = 2;
                 else if (strstartswith(line, "Enter password (will not be echoed)"))
@@ -106,7 +96,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 }
                 else if (NULL != strstr(line, "Error: "))
                 {
-                    fprintf(stderr, "7z: error parsing header: %s\n", line + 7);
+                    LOG_E("7z", "error parsing header: %s", line + 7);
                     return NULL;
                 }
                 break;
@@ -114,16 +104,16 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 if (0 == strcmp(line, "----------"))
                     state = 4;
                 else if (strstartswith(line, "Type = "))
-                    fprintf(stderr, "7z: type: %s\n", line + 7);
+                    LOG_I("7z", "type: %s", line + 7);
                 else if (strstartswith(line, "Method = "))
-                    fprintf(stderr, "7z: method: %s\n", line + 9);
+                    LOG_I("7z", "method: %s", line + 9);
                 else if (strstartswith(line, "Comment = "))
                 {
                     arr_len = strlen(line + 10);
-                    comment = (char *)malloc(arr_size = arr_len + arr_len / 2);
-                    memcpy(comment, line + 10, arr_len);
-                    comment[arr_len] = '\n';
-                    comment[++arr_len] = '\0';
+                    archive->comment = (char *)malloc(arr_size = arr_len + arr_len / 2);
+                    memcpy(archive->comment, line + 10, arr_len);
+                    archive->comment[arr_len] = '\n';
+                    archive->comment[++arr_len] = '\0';
                     state = 3;
                 }
                 break;
@@ -134,9 +124,9 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 {
                     size_t addlen = strlen(line);
                     if (arr_len + addlen + 10 >= arr_size)
-                        comment = realloc(comment, arr_size += (addlen + 10));
-                    strcat(comment, line);
-                    strcat(comment, "\n");
+                        archive->comment = realloc(archive->comment, arr_size += (addlen + 10));
+                    strcat(archive->comment, line);
+                    strcat(archive->comment, "\n");
                 }
                 break;
             case 4: // parse entry information
@@ -156,7 +146,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     if (arr_size < arr_len + 1)
                         temp->moreInfo = (struct dir_more_info_t *)realloc(temp->moreInfo, sizeof(struct dir_more_info_t) * (arr_size += 3));
                     temp->moreInfo[arr_len].key = "CRC";
-                    temp->moreInfo[arr_len].value = strdup (line + 6);
+                    temp->moreInfo[arr_len].value = strdup(line + 6);
                     temp->moreInfo[++arr_len].key = NULL;
                 }
                 else if (strstartswith(line, "Encrypted = "))
@@ -164,34 +154,50 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     if (0 == strcmp(line + 12, "+"))
                         archive->flags |= ARCHIVE_ENCRYPTED;
                 }
-//                else if (strstartswith(line, "Modified = "))
-//                {
-                        // Link: https://stackoverflow.com/a/3054052
-//                    fprintf(stderr, "7z: file %s modified date %s\n", temp->name, asctime(mktime_from_string(line + 11)));
-//                }
+                else if (strstartswith(line, "Modified = "))
+                {
+                    if (line[11] == '\0') break;
+                    if (arr_size < arr_len + 1)
+                        temp->moreInfo = (struct dir_more_info_t *)realloc(temp->moreInfo, sizeof(struct dir_more_info_t) * (arr_size += 3));
+                    temp->moreInfo[arr_len].key = "Modified";
+                    temp->moreInfo[arr_len].value = strdup(line + 11);
+                    temp->moreInfo[++arr_len].key = NULL;
+
+                     //    Link: https://stackoverflow.com/a/3054052
+                }
                 break;
 
         }
     }
-    archive->comment = comment;
 
     return root;
 }
 
-static struct cli_format_t cli_7z_proc = {
+static const struct cli_format_t cli_7z_proc = {
     .parent = {
         .name = "cli 7z",
         .mime_types_rw = _7z_mimes,
         .openArchive = format_default_openArchive,
         .listFiles = cli_listFiles,
+        .extractFiles = cli_extractFiles,
+        .deleteFiles = cli_deleteFiles,
         .closeArchive = format_default_closeArchive
     },
     .cmds = _7z_cmds,
     .cmds_uses = _7z_cmds_uses,
 
     .addSwitch = _7z_addSwitch,
+    .extractSwitch = _7z_extractSwitch,
+    .delSwitch = _7z_delSwitch,
     .listSwitch = _7z_listSwitch,
     .passwordSwitch = _7z_passwordSwitch,
+
+    .errorWrongPassword = _7z_errorWrongPassword,
+    .errorCorruptedArchive = _7z_errorCorruptedArchive,
+    .errorFullDisk = _7z_errorFullDisk,
+    .fileExistsPatterns = _7z_fileExistsPatterns,
+    .fileExistsFileName = _7z_fileExistsFileName,
+    .fileExistsInput = {"Y", "N", "A", "S", "Q"},
 
     .processList = cli_7z_processList
 };

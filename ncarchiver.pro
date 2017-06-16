@@ -5,7 +5,7 @@ PKGCONFIG += ncursesw libarchive
 
 DEFINES += HAVE_MMAP
 
-INCLUDEPATH += $$PWD/formats
+INCLUDEPATH += $$PWD/formats $$PWD/ui
 
 HEADERS += \
     xdgmime/xdgmime.h \
@@ -25,7 +25,8 @@ HEADERS += \
     \
     formats/global.h \
     formats/filetree.h \
-    formats/cli.h
+    formats/cli.h \
+    formats/logging.h
 
 SOURCES += \
     xdgmime/xdgmime.c \
@@ -41,7 +42,7 @@ SOURCES += \
     ui/main_ui.c \
     ui/quit.c \
     ui/util.c \
-    ui/inputtext.c \
+    ui/prompt.c \
     \
     formats/libarchive.c \
     formats/filetree.c \

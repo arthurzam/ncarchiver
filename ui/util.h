@@ -89,6 +89,22 @@ void read_locale();
 /* Adds a value to the size, asize and items fields of *d and its parents */
 void addparentstats(struct dir_t *, int64_t, int64_t, int);
 
+typedef void(*ui_draw_func_t)(int index);
+/*
+ * returns:
+ *  2 - close window
+ *  1 - exit key loop
+ *  0 - accepted key press
+ */
+typedef int (*ui_key_func_t )(int index, int key);
+
+#define UI_MAX_DEPTH 16
+extern ui_draw_func_t ui_draw_funcs[UI_MAX_DEPTH];
+extern ui_key_func_t  ui_key_funcs [UI_MAX_DEPTH];
+extern void         * ui_data      [UI_MAX_DEPTH];
+
+int ui_insert(ui_draw_func_t draw, ui_key_func_t key, void *data);
+void *ui_remove();
 
 #endif
 

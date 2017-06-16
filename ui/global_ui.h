@@ -11,17 +11,11 @@
 # include <inttypes.h>
 # include <stdint.h>
 
-/* Program states */
-#define ST_CALC   0
-#define ST_BROWSE 1
-#define ST_DEL    2
-#define ST_HELP   3
-#define ST_SHELL  4
-#define ST_QUIT   5
+#define PACKAGE_NAME "ncarchiver"
+#define PACKAGE_VERSION "0.0"
 
+extern struct archive_t *arc;
 
-/* program state */
-extern int pstate;
 /* read-only flag */
 extern int read_only;
 /* minimum screen update interval when calculating, in ms */
@@ -34,17 +28,8 @@ extern int confirm_quit;
 /* handle input from keyboard and update display */
 int input_handle(int);
 
-
 /* import all other global functions and variables */
-#include "browser.h"
-//#include "delete.h"
-//#include "dir.h"
-//#include "dirlist.h"
-//#include "exclude.h"
-//#include "help.h"
-//#include "path.h"
 #include "util.h"
-//#include "shell.h"
 #include "quit.h"
 #include "inputtext.h"
 
