@@ -1,5 +1,4 @@
 #include "global_ui.h"
-#include "browser.h"
 #include "filetree.h"
 #include "cli.h"
 
@@ -34,13 +33,12 @@ static int min_rows = 17, min_cols = 60;
 static int ncurses_init = 0;
 static int ncurses_tty = 0; /* Explicitely open /dev/tty instead of using stdio */
 static long lastupdate = 999;
-#ifndef TEST_UI
 
 
 static void screen_draw() {
     int i;
-    for (i = 0; ui_draw_funcs[i] != NULL; ++i);
-    ui_draw_funcs[i - 1](i - 1);
+    for (i = 0; ui_draw_funcs[i] != NULL; ++i)
+        ui_draw_funcs[i](i);
 }
 
 
@@ -171,25 +169,23 @@ FILE* loggerFile;
 /* main program */
 int main(int argc, char **argv)
 {
-//    regmatch_t matches[10];
-//    int i;
-//    regex_t re;
-//    i = regcomp(&re, "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit", REG_EXTENDED);
-//    char line[4096];
-//    line[4096]='\0';
-//    while (!feof(stdin))
-//    {
-//        fgets(line, 4095, stdin);
-//        i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
-//        printf("[%s] %s\n", line, i == REG_NOMATCH ? "no match" : "found");
-//    }
-//    return 0;
+#ifdef TEST_REGEX
+    regmatch_t matches[10];
+    int i;
+    regex_t re;
+    i = regcomp(&re, "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit", REG_EXTENDED);
+    char line[4096];
+    line[4096]='\0';
+    while (!feof(stdin))
+    {
+        fgets(line, 4095, stdin);
+        i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
+        printf("[%s] %s\n", line, i == REG_NOMATCH ? "no match" : "found");
+    }
+    return 0;
+#endif
 
-
-
-
-
-    loggerFile = fopen("ncarchiver.log", "w");
+    loggerFile = fopen("/tmp/ncarchiver.log", "w");
     read_locale();
 //  argv_parse(argc, argv);
 
@@ -197,7 +193,7 @@ int main(int argc, char **argv)
     init_nc();
 
 
-    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip" /*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/ui/archive.7z"*/;
+    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip" /*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"*/;
     const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
     printf("mime is %s\n", mime);
     const struct format_t *format = findFormat(mime);
@@ -234,6 +230,3 @@ _exit:
     fclose(loggerFile);
     return 0;
 }
-
-
-#endif

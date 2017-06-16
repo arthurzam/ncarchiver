@@ -19,7 +19,7 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
 
     if (!archive->reader)
     {
-        fprintf(stderr, "The archive reader could not be initialized.\n");
+        LOG_e("libarchive", "The archive reader could not be initialized");
         return false;
     }
 
@@ -31,7 +31,7 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
 
     if (archive_read_open_filename(archive->reader, archive->a.path, 10240) != ARCHIVE_OK)
     {
-        fprintf(stderr, "Could not open the archive:%s\n", archive_error_string(archive->reader));
+        LOG_E("libarchive", "Could not open the archive: %s", archive_error_string(archive->reader));
         return false;
     }
 
@@ -63,7 +63,7 @@ static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
 
     struct dir_t *root = filetree_createRoot(), *temp;
 
-    printf("compression filter: %s\n", archive_filter_name(archive->reader, 0));
+    LOG_I("libarchive", "compression filter: %s", archive_filter_name(archive->reader, 0));
 
     struct archive_entry *aentry;
     int result = ARCHIVE_RETRY;

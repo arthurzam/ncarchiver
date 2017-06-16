@@ -26,7 +26,7 @@ static int prompt_key(int index, int key) {
         case 9: // TAB
             if (data->buttons[++data->selected_button] == NULL)
                 data->selected_button = 0;
-            break;
+            return 0;
         case 10: // Enter
         case KEY_ENTER:
             return 1;
@@ -39,16 +39,30 @@ static int prompt_key(int index, int key) {
                 if (data->res)
                     data->res[i - 1] = '\0';
             }
-            break;
-        default:
-            if (data->check_func && data->check_func(key))
+            return 0;
+    }
+    if (!data->check_func)
+    {
+        if (isalpha(key))
+            for (i = 0; data->buttons[i] != NULL; ++i)
+                if (tolower(key) == data->buttons[i][0])
+                {
+                    data->selected_button = i;
+                    return 1;
+                }
+        for (i = 0; data->buttons[i] != NULL; ++i)
+            if (data->buttons[i][0] == '\x1')
             {
-                i = data->res ? strlen(data->res) : 0;
-                data->res = realloc(data->res, i + 2);
-                data->res[i] = key;
-                data->res[i + 1] = '\0';
+                data->selected_button = i;
+                return 1;
             }
-            break;
+    }
+    else if (data->check_func(key))
+    {
+        i = data->res ? strlen(data->res) : 0;
+        data->res = realloc(data->res, i + 2);
+        data->res[i] = key;
+        data->res[i + 1] = '\0';
     }
     return 0;
 }
@@ -57,7 +71,7 @@ static void prompt_draw(int index) {
     struct prompt_t *data = (struct prompt_t *)ui_data[index];
     unsigned col = 2, i;
 
-    nccreate(8, data->width, data->title);
+    nccreate(data->check_func ? 8 : 7, data->width, data->title);
 
     ncaddstr(2,2, data->prompt);
     if (data->check_func)
@@ -73,7 +87,10 @@ static void prompt_draw(int index) {
     {
         if (i == data->selected_button)
             attron(A_REVERSE);
-        ncaddstr(5, col, data->buttons[i]);
+        if (data->check_func)
+            ncaddstr(5, col, data->buttons[i]);
+        else
+            ncaddstr(4, col, data->buttons[i] + 1);
         if (i == data->selected_button)
             attroff(A_REVERSE);
         col += 3 + strlen(data->buttons[i]);
@@ -127,4 +144,21 @@ int prompt_msgbox(const char *title, const char *msg, const char *const *buttons
     prompt_init(&data);
     free(data.res);
     return data.selected_button;
+}
+
+static const char *const prompy_yesno_btns[] = {
+    "y""(Y)es",
+    "\x1""(N)o",
+    NULL
+};
+
+bool prompy_yesno(const char *title, const char *msg, int width)
+{
+    struct prompt_t data = {
+        .title = title, .prompt = msg, .res = NULL, .buttons = prompy_yesno_btns,
+        .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0
+    };
+    prompt_init(&data);
+    free(data.res);
+    return data.selected_button == 0;
 }

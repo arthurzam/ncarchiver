@@ -30,7 +30,9 @@ int input_handle(int);
 
 /* import all other global functions and variables */
 #include "util.h"
-#include "quit.h"
 #include "inputtext.h"
+
+void browse_init(struct dir_t *base);
+void nodeinfo_init(struct dir_t *node);
 
 #endif // GLOBAL_UI_H

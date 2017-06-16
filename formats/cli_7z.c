@@ -92,6 +92,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 {
                     archive->flags |= ARCHIVE_ENCRYPTED;
                     archive->error = ARCHIVE_ERROR_BAD_PASSWORD;
+                    LOG_e("7z", "missing password");
                     return NULL;
                 }
                 else if (NULL != strstr(line, "Error: "))

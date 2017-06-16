@@ -136,7 +136,8 @@ static int browse_key(int index, int ch)
             break;
         case 'q':
         case 'Q':
-            quit_init();
+            if (prompy_yesno("Confirm Quit", "Really quit? (y/N)", 30))
+                return 1;
             break;
         case 'o':
         case 'O':
@@ -150,22 +151,25 @@ static int browse_key(int index, int ch)
             char dTemplate[] = "/tmp/.-ncark-XXXXXX";
             mkdtemp(dTemplate);
 
-            arc->format->extractFiles(arc, (const char *const *)path, "/tmp" /*dTemplate*/);
+            arc->format->extractFiles(arc, (const char *const *)path, "/tmp/" /*dTemplate*/);
 
             for (i = 0; i < selected_size; ++i)
                 free(path[i]);
             free(path);
         }
             break;
+        case 'i':
+            nodeinfo_init(selected);
+            break;
     }
     return 0;
 }
 
 
-void browse_init(struct dir_t *par) {
+void browse_init(struct dir_t *base) {
     ui_insert(browse_draw, browse_key, NULL);
-  message = NULL;
-  curr = par;
-  selected = filetree_sort(curr->subs);
+    message = NULL;
+    curr = base;
+    selected = filetree_sort(curr->subs);
 }
 

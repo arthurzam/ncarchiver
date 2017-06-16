@@ -17,9 +17,7 @@ HEADERS += \
     xdgmime/xdgmimemagic.h \
     xdgmime/xdgmimeparent.h \
     \
-    ui/browser.h \
     ui/global_ui.h \
-    ui/quit.h \
     ui/util.h \
     ui/inputtext.h \
     \
@@ -40,9 +38,9 @@ SOURCES += \
     \
     ui/browser.c \
     ui/main_ui.c \
-    ui/quit.c \
     ui/util.c \
     ui/prompt.c \
+    ui/nodeinfo.c \
     \
     formats/libarchive.c \
     formats/filetree.c \

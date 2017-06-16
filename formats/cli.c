@@ -34,7 +34,7 @@ char *getCmdPath(const char *cmd)
         found_path[path_len] = '/';
         memcpy(found_path + 1 + path_len, cmd, cmd_len + 1);
 
-        if (access(found_path, X_OK | R_OK) == 0) // TODO: check if it works. If not, replace with F_OK
+        if (access(found_path, X_OK | R_OK) == 0)
             break;
 
         free(found_path);
@@ -113,7 +113,7 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
                     }
                     execvp(cmd, argv);
                     /* Error occured. */
-                    fprintf(stderr, "error running %s: %s", cmd, strerror(errno));
+                    LOG_E("cli", "error running %s: %s", cmd, strerror(errno));
                     abort();
                 }
             }
@@ -267,22 +267,26 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv)
                 if (_check_errors(line, cli_format->errorWrongPassword))
                 {
                     res = ARCHIVE_ERROR_BAD_PASSWORD;
-                    LOG_I("cli extract", "bad password %s for %s", archive->password, archive->path);
+                    LOG_I("cli parse", "bad password %s for %s", archive->password, archive->path);
+                    break;
                 }
                 else if (_check_errors(line, cli_format->errorCorruptedArchive))
                 {
                     res = ARCHIVE_ERROR_CORRUPTED;
-                    LOG_I("cli extract", "corrupted archive %s", archive->path);
+                    LOG_I("cli parse", "corrupted archive %s", archive->path);
+                    break;
                 }
                 else if (_check_errors(line, cli_format->errorFullDisk))
                 {
                     res = ARCHIVE_ERROR_FULL_DISK;
-                    LOG_I("cli extract", "disk full for %s", archive->path);
+                    LOG_I("cli parse", "disk full for %s", archive->path);
+                    break;
                 }
                 else if (_check_errors(line, cli_format->fileExistsPatterns))
                 {
-                    static const char *btns[] = {"Overwrite", "Skip", "Overwrite All", "Autoskip", "Cancel", NULL};
-                    int answer = autoskip ? 3 : autooverwrite ? 2 : prompt_msgbox("File Exists", "", btns, 1, 56);
+                    static const char *btns[] = {"o""(O)verwrite", "s""(S)kip", "\x2""Overwrite All", "\x2""Autoskip", "c""(C)ancel", NULL};
+                    // TODO: find the existing file name using cli_format->fileExistsFileName
+                    int answer = autoskip ? 3 : autooverwrite ? 2 : prompt_msgbox("File Exists", "", btns, 1, 66);
                     if (answer == 2)
                         autooverwrite = true;
                     else if (answer == 3)
@@ -290,6 +294,7 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv)
                     else if (answer == 4)
                     {
                         res = ARCHIVE_ERROR_CANCELED;
+                        LOG_i("cli parse", "parsing was cancelled after file collision");
                         break;
                     }
                     fprintf(inF, "%s\n", cli_format->fileExistsInput[answer]);
