@@ -45,6 +45,8 @@ static struct archive_t *libarchive_openArchive(const struct format_t *_archive,
     archive->a.dir = NULL;
     archive->a.format = _archive;
     archive->a.flags = 0;
+    archive->a.password = NULL;
+    archive->a.comment = NULL;
 
     archive->reader = archive_read_disk_new();
     archive_read_disk_set_standard_lookup(archive->reader);

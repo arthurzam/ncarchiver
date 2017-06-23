@@ -28,13 +28,10 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
         if (root != (struct dir_t *)temp)
         {
             temp = (struct dir_t *)malloc(sizeof(struct dir_t));
-            temp->parent = root;
-            temp->prev = temp->subs = NULL;
-            temp->next = root->subs;
-            temp->name = strdup(start);
-            temp->items = 0;
-            temp->flags = NODE_ISDIR;
-            temp->moreInfo = NULL;
+            *temp = (struct dir_t) {
+                .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
+                .moreInfo = NULL, .flags = NODE_ISDIR, .realSize = 0, .compressSize = 0, .items = 0
+            };
 
             if (root->subs)
                 root->subs->prev = temp;
@@ -52,12 +49,10 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
     if (*start != '\0')
     {
         temp = (struct dir_t *)malloc(sizeof(struct dir_t));
-        temp->parent = root;
-        temp->prev = temp->subs = NULL;
-        temp->next = root->subs;
-        temp->name = strdup(start);
-        temp->flags = 0;
-        temp->moreInfo = NULL;
+        *temp = (struct dir_t) {
+            .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
+            .moreInfo = NULL, .flags = 0, .realSize = 0, .compressSize = 0, .items = 0
+        };
 
         if (root->subs)
             root->subs->prev = temp;
@@ -204,4 +199,14 @@ struct dir_t *filetree_createRoot()
         .flags = NODE_ISDIR, .realSize = 0, .compressSize = 0, .items = 0
     };
     return root;
+}
+
+char **filetree_getArr(struct dir_t **nodes, unsigned nodes_size)
+{
+    unsigned i;
+    char **files = (char**)malloc(sizeof(char *) * (nodes_size + 1));
+    for (i = 0; i < nodes_size; ++i)
+        files[i] = strdup(filetree_getpath(nodes[i]) + 1);
+    files[nodes_size] = NULL;
+    return files;
 }

@@ -1,6 +1,7 @@
 #include "global.h"
 #include "global_ui.h"
 #include "filetree.h"
+#include "actions.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -8,18 +9,22 @@
 #include <ncurses.h>
 
 static int nodeinfo_key(int index, int ch) {
-    // struct dir_t *node = (struct dir_t *)ui_data[index];
+    const char *files[2] = {NULL, NULL};
+    struct dir_t *node = (struct dir_t *)ui_data[index];
     switch (ch) {
         case 'd':
         case 'D':
             if (prompy_yesno("Delete file", "Are you sure you want to delete this file?", 46))
             {
+                files[0] = filetree_getpath(node) + 1;
+                // arc->format->deleteFiles(arc, files);
                 // TODO: delete file
             }
             break;
         case 'o':
         case 'O':
-            // TODO: open file
+            files[0] = filetree_getpath(node) + 1;
+            actions_openFiles(files);
             break;
         case 'Q':
         case 'q':
@@ -46,8 +51,8 @@ static void nodeinfo_draw(int index) {
     nccreate(9 + moreCount, width + 4, "Info");
     ncprint(row++, 2, "Name: %s", node->name);
     ncprint(row++, 2, "Path: %s", filetree_getpath(node));
-    ncprint(row++, 2, "File Size: %d", node->realSize);
-    ncprint(row++, 2, "Compressed Size: %d", node->realSize);
+    ncprint(row++, 2, "File Size:       %s", formatsize(node->realSize));
+    ncprint(row++, 2, "Compressed Size: %s", formatsize(node->compressSize));
     if (node->moreInfo)
         for (i = 0; node->moreInfo[i].key != NULL; ++i)
             ncprint(row++, 2, "%s: %s", node->moreInfo[i].key, node->moreInfo[i].value);

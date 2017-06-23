@@ -1,7 +1,6 @@
 #ifndef GLOBAL_UI_H
 #define GLOBAL_UI_H
 
-//#include "config.h"
 #include <stdio.h>
 #include <stddef.h>
 #include <limits.h>
@@ -17,20 +16,16 @@
 extern struct archive_t *arc;
 
 /* read-only flag */
-extern int read_only;
+// extern int read_only;
 /* minimum screen update interval when calculating, in ms */
 extern long update_delay;
-/* filter directories with CACHEDIR.TAG */
-extern int cachedir_tags;
-/* flag if we should ask for confirmation when quitting */
-extern int confirm_quit;
 
 /* handle input from keyboard and update display */
 int input_handle(int);
 
 /* import all other global functions and variables */
 #include "util.h"
-#include "inputtext.h"
+#include "prompt.h"
 
 void browse_init(struct dir_t *base);
 void nodeinfo_init(struct dir_t *node);

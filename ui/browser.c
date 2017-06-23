@@ -1,6 +1,7 @@
 #include "global.h"
 #include "global_ui.h"
 #include "filetree.h"
+#include "actions.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -141,22 +142,14 @@ static int browse_key(int index, int ch)
             break;
         case 'o':
         case 'O':
-        {
-            unsigned i;
-            char **path = (char**)malloc(sizeof(char *) * (selected_size + 1));
-            for (i = 0; i < selected_size; ++i)
-                path[i] = strdup(filetree_getpath(selected_array[i]) + 1);
-            path[selected_size] = NULL;
-
-            char dTemplate[] = "/tmp/.-ncark-XXXXXX";
-            mkdtemp(dTemplate);
-
-            arc->format->extractFiles(arc, (const char *const *)path, "/tmp/" /*dTemplate*/);
-
-            for (i = 0; i < selected_size; ++i)
-                free(path[i]);
-            free(path);
-        }
+            if (selected_size > 0)
+            {
+                char **files = filetree_getArr(selected_array, selected_size);
+                actions_openFiles((const char *const *)files);
+                for (unsigned i = 0; i < selected_size; ++i)
+                    free(files[i]);
+                free(files);
+            }
             break;
         case 'i':
             nodeinfo_init(selected);
@@ -166,7 +159,8 @@ static int browse_key(int index, int ch)
 }
 
 
-void browse_init(struct dir_t *base) {
+void browse_init(struct dir_t *base)
+{
     ui_insert(browse_draw, browse_key, NULL);
     message = NULL;
     curr = base;

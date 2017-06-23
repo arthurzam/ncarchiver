@@ -25,9 +25,9 @@
             });                                               \
             ++elem)
 
-int read_only = 0;
+// int read_only = 0;
 long update_delay = 100;
-int cachedir_tags = 0;
+// int cachedir_tags = 0;
 
 static int min_rows = 17, min_cols = 60;
 static int ncurses_init = 0;
@@ -164,27 +164,10 @@ static const struct format_t *findFormat(const char *mime)
 }
 
 FILE* loggerFile;
-#include <regex.h>
 
 /* main program */
 int main(int argc, char **argv)
 {
-#ifdef TEST_REGEX
-    regmatch_t matches[10];
-    int i;
-    regex_t re;
-    i = regcomp(&re, "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit", REG_EXTENDED);
-    char line[4096];
-    line[4096]='\0';
-    while (!feof(stdin))
-    {
-        fgets(line, 4095, stdin);
-        i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
-        printf("[%s] %s\n", line, i == REG_NOMATCH ? "no match" : "found");
-    }
-    return 0;
-#endif
-
     loggerFile = fopen("/tmp/ncarchiver.log", "w");
     read_locale();
 //  argv_parse(argc, argv);
@@ -216,7 +199,7 @@ int main(int argc, char **argv)
     }
     browse_init(arc->dir);
 
-    while(input_handle(0) != 1);
+    while (input_handle(0) != 1);
 
 _exit:
     if(ncurses_init)

@@ -19,7 +19,8 @@ HEADERS += \
     \
     ui/global_ui.h \
     ui/util.h \
-    ui/inputtext.h \
+    ui/prompt.h \
+    ui/actions.h \
     \
     formats/global.h \
     formats/filetree.h \
@@ -41,6 +42,7 @@ SOURCES += \
     ui/util.c \
     ui/prompt.c \
     ui/nodeinfo.c \
+    ui/actions.c \
     \
     formats/libarchive.c \
     formats/filetree.c \

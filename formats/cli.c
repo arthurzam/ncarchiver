@@ -1,6 +1,6 @@
 #include "cli.h"
 #include "filetree.h"
-#include "inputtext.h"
+#include "prompt.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,8 +57,7 @@ char *getCorrectCommand(const struct cli_format_t *format, int use)
     return res;
 }
 
-bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **argv) __attribute__ ((__nonnull__ (1, 4, 5)));
-bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **argv)
+bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **argv, const char *cwd)
 {
     int p1[2], p2[2];
     int flags;
@@ -111,6 +110,8 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
                         close(STDOUT_FILENO);
                         close(STDERR_FILENO);
                     }
+                    if (cwd)
+                        chdir(cwd);
                     execvp(cmd, argv);
                     /* Error occured. */
                     LOG_E("cli", "error running %s: %s", cmd, strerror(errno));
@@ -168,7 +169,7 @@ static char **cli_passwordArray(struct archive_t *_archive)
     {
         if (-1 == asprintf(passArgv + i, cli_format->passwordSwitch[i], _archive->password))
         {
-            fputs("Error with asprintf", stderr);
+            LOG_e("cli", "Error with asprintf");
             abort();
         }
     }
@@ -191,7 +192,7 @@ struct dir_t *cli_listFiles(struct archive_t *_archive)
 
     int pid, in, out;
     struct dir_t *root = NULL;
-    if (start_subprocess(&pid, &in, &out, argv[0], argv))
+    if (start_subprocess(&pid, &in, &out, argv[0], argv, NULL))
     {
         FILE *outF = fdopen(out, "r");
         FILE *inF = fdopen(in, "w");
@@ -230,21 +231,76 @@ static bool _check_errors(const char* line, const char *const *patterns)
     return false;
 }
 
-static int cli_normal_runProcess(struct archive_t *archive, char **argv)
+int cli_processLineErrors(struct archive_t *archive, const char *line, FILE *inF, int *flags)
 {
+    static char *repeatingPath = NULL;
+
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
 
     regmatch_t matches[10];
     int i;
     regex_t re;
 
+    const char *const *iter;
+
+    if (_check_errors(line, cli_format->errorWrongPassword))
+    {
+        LOG_I("cli parse", "bad password %s for %s", archive->password, archive->path);
+        return ARCHIVE_ERROR_BAD_PASSWORD;
+    }
+    else if (_check_errors(line, cli_format->errorCorruptedArchive))
+    {
+        LOG_I("cli parse", "corrupted archive %s", archive->path);
+        return ARCHIVE_ERROR_CORRUPTED;
+    }
+    else if (_check_errors(line, cli_format->errorFullDisk))
+    {
+        LOG_I("cli parse", "disk full for %s", archive->path);
+        return ARCHIVE_ERROR_FULL_DISK;
+    }
+    else if (_check_errors(line, cli_format->fileExistsPatterns))
+    {
+        int answer = prompt_overwrite(repeatingPath, flags);
+        if (cli_format->fileExistsInput[answer])
+            fprintf(inF, "%s\n", cli_format->fileExistsInput[answer]);
+        if (answer == 4)
+        {
+            LOG_i("cli parse", "parsing was cancelled after file collision");
+            return ARCHIVE_ERROR_CANCELED;
+        }
+        fflush(inF);
+    }
+
+    for (iter = cli_format->fileExistsFileName; *iter != NULL; ++iter)
+    {
+        regcomp(&re, *iter, REG_EXTENDED);
+        i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
+        regfree(&re);
+        if (i == REG_NOERROR)
+        {
+            i = matches[1].rm_eo - matches[1].rm_so;
+            repeatingPath = (char *)realloc(repeatingPath, i + 1);
+            memcpy(repeatingPath, line + matches[1].rm_so, i);
+            repeatingPath[i] = '\0';
+            LOG_I("cli parse", "found repeating file %s", repeatingPath);
+            return ARCHIVE_ERROR_NO;
+        }
+    }
+
+    return ARCHIVE_ERROR_NO;
+}
+
+static int cli_normal_runProcess(struct archive_t *archive, char **argv, const char *cwd)
+{
+    struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
+
     int pid, out, in;
     FILE *outF, *inF;
     char line[2048 + 1];
     line[sizeof(line) - 1] = '\0';
     int res = ARCHIVE_ERROR_NO;
-    bool autoskip = false, autooverwrite = false;
-    if (start_subprocess(&pid, &in, &out, argv[0], argv))
+    int flags = 0;
+    if (start_subprocess(&pid, &in, &out, argv[0], argv, cwd))
     {
         inF = fdopen(in, "w");
         outF = fdopen(out, "r");
@@ -260,47 +316,7 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv)
             if (*line == '\0')
                 continue;
 
-            if (cli_format->processLine)
-                res = cli_format->processLine(archive, line);
-            else
-            {
-                if (_check_errors(line, cli_format->errorWrongPassword))
-                {
-                    res = ARCHIVE_ERROR_BAD_PASSWORD;
-                    LOG_I("cli parse", "bad password %s for %s", archive->password, archive->path);
-                    break;
-                }
-                else if (_check_errors(line, cli_format->errorCorruptedArchive))
-                {
-                    res = ARCHIVE_ERROR_CORRUPTED;
-                    LOG_I("cli parse", "corrupted archive %s", archive->path);
-                    break;
-                }
-                else if (_check_errors(line, cli_format->errorFullDisk))
-                {
-                    res = ARCHIVE_ERROR_FULL_DISK;
-                    LOG_I("cli parse", "disk full for %s", archive->path);
-                    break;
-                }
-                else if (_check_errors(line, cli_format->fileExistsPatterns))
-                {
-                    static const char *btns[] = {"o""(O)verwrite", "s""(S)kip", "\x2""Overwrite All", "\x2""Autoskip", "c""(C)ancel", NULL};
-                    // TODO: find the existing file name using cli_format->fileExistsFileName
-                    int answer = autoskip ? 3 : autooverwrite ? 2 : prompt_msgbox("File Exists", "", btns, 1, 66);
-                    if (answer == 2)
-                        autooverwrite = true;
-                    else if (answer == 3)
-                        autoskip = true;
-                    else if (answer == 4)
-                    {
-                        res = ARCHIVE_ERROR_CANCELED;
-                        LOG_i("cli parse", "parsing was cancelled after file collision");
-                        break;
-                    }
-                    fprintf(inF, "%s\n", cli_format->fileExistsInput[answer]);
-                    fflush(inF);
-                }
-            }
+            res = (cli_format->processLine ?: cli_processLineErrors)(archive, line, inF, &flags);
         }
         fclose(outF);
         fclose(inF);
@@ -312,10 +328,6 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv)
 
 bool cli_extractFiles(struct archive_t *archive, const char *const *files, const char *destinationFolder)
 {
-    char oldcwd[FILENAME_MAX];
-    getcwd(oldcwd, sizeof(oldcwd));
-    chdir(destinationFolder);
-
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     int size = 3 + arrlen(cli_format->extractSwitch) + arrlen(cli_format->passwordSwitch) + arrlen(files);
     char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
@@ -327,15 +339,13 @@ bool cli_extractFiles(struct archive_t *archive, const char *const *files, const
     ptr = arrcpy(ptr, (char **)files);
     ptr[0] = NULL;
 
-    int res = cli_normal_runProcess(archive, argv);
+    int res = cli_normal_runProcess(archive, argv, destinationFolder);
 
     arrfree(passArgv);
     free(argv[0]);
     free(argv);
 
-    chdir(oldcwd);
-
-    return res;
+    return res == ARCHIVE_ERROR_NO;
 }
 
 bool cli_deleteFiles(struct archive_t *archive, const char *const *files)
@@ -350,7 +360,27 @@ bool cli_deleteFiles(struct archive_t *archive, const char *const *files)
     ptr = arrcpy(ptr, (char **)files);
     ptr[0] = NULL;
 
-    int res = cli_normal_runProcess(archive, argv);
+    int res = cli_normal_runProcess(archive, argv, NULL);
+
+    arrfree(passArgv);
+    free(argv[0]);
+    free(argv);
+
+    return res;
+}
+
+bool cli_testFiles(struct archive_t *archive)
+{
+    struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
+    int size = 3 + arrlen(cli_format->delSwitch) + arrlen(cli_format->passwordSwitch);
+    char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
+    char **passArgv = cli_passwordArray(archive);
+    argv[0] = getCorrectCommand(cli_format, CLI_TEST);
+    ptr = arrcpy(argv + 1, (char **)cli_format->delSwitch);
+    ptr = arrcpy(ptr, passArgv);
+    ptr[0] = NULL;
+
+    int res = cli_normal_runProcess(archive, argv, NULL);
 
     arrfree(passArgv);
     free(argv[0]);

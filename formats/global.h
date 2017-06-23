@@ -14,7 +14,6 @@ struct dir_more_info_t {
 
 struct dir_t {
     struct dir_t *parent, *prev, *next, *subs;
-    // more data ptr
     char *name;
     struct dir_more_info_t *moreInfo;
     int flags;
@@ -62,6 +61,7 @@ struct format_t {
     struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
     bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__ (1,2,3)));
     bool (*deleteFiles)(struct archive_t *archive, const char *const *files) __attribute__ ((__nonnull__ (1,2)));
+    bool (*testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
     uint8_t flags;
 };
 

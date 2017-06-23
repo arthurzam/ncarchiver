@@ -67,6 +67,8 @@ char *formatsize(int64_t from) {
   static char dat[10]; /* "xxx.x MiB" */
   float r = from;
   char c = ' ';
+  if (from == -1)
+      return "-1";
   if (si) {
     if(r < 1000.0f)   { }
     else if(r < 1e6f) { c = 'K'; r/=1e3f; }
@@ -155,36 +157,37 @@ int ncresize(int minrows, int mincols) {
 }
 
 
-void nccreate(int height, int width, const char *title) {
-  int i;
+void nccreate(int height, int width, const char *title)
+{
+    int i;
 
-  subwinr = winrows/2-height/2;
-  subwinc = wincols/2-width/2;
+    subwinr = winrows / 2 - height / 2;
+    subwinc = wincols / 2 - width  / 2;
 
-  /* clear window */
-  for(i=0; i<height; i++)
-    mvhline(subwinr+i, subwinc, ' ', width);
+    /* clear window */
+    for (i = 0; i < height; i++)
+        mvhline(subwinr + i, subwinc, ' ', width);
 
-  /* box() only works around curses windows, so create our own */
-  move(subwinr, subwinc);
-  addch(ACS_ULCORNER);
-  for(i=0; i<width-2; i++)
-    addch(ACS_HLINE);
-  addch(ACS_URCORNER);
+    /* box() only works around curses windows, so create our own */
+    move(subwinr, subwinc);
+    addch(ACS_ULCORNER);
+    for (i = 0; i < width - 2; i++)
+        addch(ACS_HLINE);
+    addch(ACS_URCORNER);
 
-  move(subwinr+height-1, subwinc);
-  addch(ACS_LLCORNER);
-  for(i=0; i<width-2; i++)
-    addch(ACS_HLINE);
-  addch(ACS_LRCORNER);
+    move(subwinr + height - 1, subwinc);
+    addch(ACS_LLCORNER);
+    for (i = 0; i < width - 2; i++)
+        addch(ACS_HLINE);
+    addch(ACS_LRCORNER);
 
-  mvvline(subwinr+1, subwinc, ACS_VLINE, height-2);
-  mvvline(subwinr+1, subwinc+width-1, ACS_VLINE, height-2);
+    mvvline(subwinr + 1, subwinc, ACS_VLINE, height - 2);
+    mvvline(subwinr + 1, subwinc + width - 1, ACS_VLINE, height - 2);
 
-  /* title */
-  attron(A_BOLD);
-  mvaddstr(subwinr, subwinc+4, title);
-  attroff(A_BOLD);
+    /* title */
+    attron(A_BOLD);
+    mvaddstr(subwinr, subwinc + 4, title);
+    attroff(A_BOLD);
 }
 
 

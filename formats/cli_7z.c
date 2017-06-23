@@ -19,6 +19,7 @@ static const char *_7z_extractSwitch[] = {"x", NULL};
 static const char *_7z_delSwitch[] = {"d", "-bd", NULL};
 static const char *_7z_listSwitch[] = {"l", "-slt", "-bd", NULL};
 static const char *_7z_passwordSwitch[] = {"-p%s", NULL};
+static const char *_7z_testSwitch[] = {"t", "-bd", NULL};
 
 static const char *_7z_errorWrongPassword[] = {"Wrong password", NULL};
 static const char *_7z_errorCorruptedArchive[] = {"Unexpected end of archive", "Headers Error", NULL};
@@ -55,6 +56,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     int state = 0;
     struct dir_t *root = NULL, *temp;
     regex_t re;
+    regcomp(&re, "^p7zip Version ([0-9\\.]+) ", REG_EXTENDED);
     regmatch_t matches[10];
     int i;
     size_t arr_size = 0, arr_len = 0;
@@ -73,15 +75,14 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
         switch (state)
         {
             case 0: // parse title
-                regcomp(&re, "^p7zip Version ([0-9\\.]+) ", REG_EXTENDED);
                 i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
                 if (i == REG_NOERROR)
                 {
                     state = 1;
                     line[matches[1].rm_eo] = '\0';
+                    regfree(&re);
                     LOG_I("7z", "p7zip version %s detected", line + matches[1].rm_so);
                 }
-                regfree(&re);
                 break;
             case 1: // parse header
                 if (strstartswith(line, "Listing archive:"))
@@ -164,10 +165,9 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     temp->moreInfo[arr_len].value = strdup(line + 11);
                     temp->moreInfo[++arr_len].key = NULL;
 
-                     //    Link: https://stackoverflow.com/a/3054052
+                    //    Link: https://stackoverflow.com/a/3054052
                 }
                 break;
-
         }
     }
 
@@ -182,6 +182,7 @@ static const struct cli_format_t cli_7z_proc = {
         .listFiles = cli_listFiles,
         .extractFiles = cli_extractFiles,
         .deleteFiles = cli_deleteFiles,
+        .testFiles = cli_testFiles,
         .closeArchive = format_default_closeArchive
     },
     .cmds = _7z_cmds,
@@ -192,6 +193,7 @@ static const struct cli_format_t cli_7z_proc = {
     .delSwitch = _7z_delSwitch,
     .listSwitch = _7z_listSwitch,
     .passwordSwitch = _7z_passwordSwitch,
+    .testSwitch = _7z_testSwitch,
 
     .errorWrongPassword = _7z_errorWrongPassword,
     .errorCorruptedArchive = _7z_errorCorruptedArchive,

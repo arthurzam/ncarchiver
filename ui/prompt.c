@@ -77,7 +77,7 @@ static void prompt_draw(int index) {
     if (data->check_func)
     {
         attron(A_REVERSE);
-        i = strlen(data->res ?: "");
+        i = data->res ? strlen(data->res) : 0;
         i = i > data->width - 4 ? i - data->width + 4 : 0;
         ncprint(3,2,"%-*s", data->width - 4, (data->res ?: "") + i);
         attroff(A_REVERSE);
@@ -98,7 +98,6 @@ static void prompt_draw(int index) {
 }
 
 static void prompt_init(struct prompt_t *data) {
-
     ui_insert(prompt_draw, prompt_key, data);
     while (input_handle(0) != 1);
     ui_remove();
@@ -110,8 +109,7 @@ static const char *const prompt_text_btns[] = {
     NULL
 };
 
-char *prompt_text(const char *title, const char *prompt)
-{
+char *prompt_text(const char *title, const char *prompt) {
     struct prompt_t data = {
         .title = title, .prompt = prompt, .res = NULL, .buttons = prompt_text_btns,
         .check_func = isprint, .width = 30, .selected_button = 0, .cursor = 0
@@ -122,8 +120,7 @@ char *prompt_text(const char *title, const char *prompt)
     return data.selected_button == 0 ? data.res : NULL;
 }
 
-int prompt_number(const char *title, const char *prompt)
-{
+int prompt_number(const char *title, const char *prompt) {
     struct prompt_t data = {
         .title = title, .prompt = prompt, .res = NULL, .buttons = prompt_text_btns,
         .check_func = isdigit, .width = 30, .selected_button = 0, .cursor = 0
@@ -135,8 +132,7 @@ int prompt_number(const char *title, const char *prompt)
     return res;
 }
 
-int prompt_msgbox(const char *title, const char *msg, const char *const *buttons, int defaultBtn, int width)
-{
+int prompt_msgbox(const char *title, const char *msg, const char *const *buttons, int defaultBtn, int width) {
     struct prompt_t data = {
         .title = title, .prompt = msg, .res = NULL, .buttons = buttons,
         .check_func = NULL, .width = width, .selected_button = defaultBtn, .cursor = 0
@@ -147,13 +143,12 @@ int prompt_msgbox(const char *title, const char *msg, const char *const *buttons
 }
 
 static const char *const prompy_yesno_btns[] = {
-    "y""(Y)es",
+    "y"  "(Y)es",
     "\x1""(N)o",
     NULL
 };
 
-bool prompy_yesno(const char *title, const char *msg, int width)
-{
+bool prompy_yesno(const char *title, const char *msg, int width) {
     struct prompt_t data = {
         .title = title, .prompt = msg, .res = NULL, .buttons = prompy_yesno_btns,
         .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0
@@ -161,4 +156,40 @@ bool prompy_yesno(const char *title, const char *msg, int width)
     prompt_init(&data);
     free(data.res);
     return data.selected_button == 0;
+}
+
+static const char *const prompy_ok_btns[] = {
+    "\x1""OK",
+    NULL
+};
+
+void prompy_ok(const char *title, const char *msg, int width) {
+    struct prompt_t data = {
+        .title = title, .prompt = msg, .res = NULL, .buttons = prompy_ok_btns,
+        .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0
+    };
+    prompt_init(&data);
+    free(data.res);
+}
+
+static const char *prompt_overwrite_btns[] = {
+    "o"  "(O)verwrite",
+    "s"  "(S)kip",
+    "\x2""Overwrite All",
+    "\x2""Autoskip",
+    "c"  "(C)ancel",
+    NULL
+};
+
+int prompt_overwrite(const char *filename, int *flags) {
+    if (*flags & OVERWRITE_AUTOSKIP)
+        return 3;
+    if (*flags & OVERWRITE_OVERWRITE)
+        return 2;
+    int answer = prompt_msgbox("File Exists", filename, prompt_overwrite_btns, 1, 66);
+    if (answer == 2)
+        *flags |= OVERWRITE_OVERWRITE;
+    else if (answer == 3)
+        *flags |= OVERWRITE_AUTOSKIP;
+    return answer;
 }

@@ -10,6 +10,8 @@ struct archive_t *format_default_openArchive(const struct format_t *format, char
     archive->dir = NULL;
     archive->format = format;
     archive->flags = 0;
+    archive->password = NULL;
+    archive->comment = NULL;
 
     return archive;
 }
@@ -18,6 +20,7 @@ bool format_default_closeArchive(struct archive_t *archive)
 {
     filetree_free(archive->dir);
     free(archive->comment);
+    free(archive->password);
     free(archive);
     return true;
 }
