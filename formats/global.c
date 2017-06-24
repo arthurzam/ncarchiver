@@ -1,19 +1,17 @@
 #include "global.h"
 #include "filetree.h"
 
-#include <stdlib.h>
+#include <string.h>
 
-struct archive_t *format_default_openArchive(const struct format_t *format, char *path)
+bool format_default_openArchive(struct archive_t *archive, char *path)
 {
-    struct archive_t *archive = (struct archive_t *)malloc(sizeof(struct archive_t));
-    archive->path = path;
+    archive->path = strdup(path);
     archive->dir = NULL;
-    archive->format = format;
     archive->flags = 0;
     archive->password = NULL;
     archive->comment = NULL;
 
-    return archive;
+    return true;
 }
 
 bool format_default_closeArchive(struct archive_t *archive)
@@ -21,6 +19,7 @@ bool format_default_closeArchive(struct archive_t *archive)
     filetree_free(archive->dir);
     free(archive->comment);
     free(archive->password);
+    free(archive->path);
     free(archive);
     return true;
 }

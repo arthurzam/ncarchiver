@@ -177,7 +177,10 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
 static const struct cli_format_t cli_7z_proc = {
     .parent = {
         .name = "cli 7z",
+        .objectSize = sizeof(struct archive_t),
         .mime_types_rw = _7z_mimes,
+        .flags = FORMAT_ENCRYPTION | FORMAT_ENCRYPTION_HEADERS,
+
         .openArchive = format_default_openArchive,
         .listFiles = cli_listFiles,
         .extractFiles = cli_extractFiles,

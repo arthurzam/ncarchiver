@@ -151,19 +151,30 @@ static const struct format_t *findFormat(const char *mime)
         if ((*iter)->mime_types_rw)
             for(ptr = (*iter)->mime_types_rw; *ptr; ++ptr)
                 if (0 == strcmp(*ptr, mime))
+                {
+                    arc = malloc((*iter)->objectSize);
                     return *iter;
+                }
     }
     section_foreach_entry(format_array, const struct format_t *, iter)
     {
         if ((*iter)->mime_types_ro)
             for(ptr = (*iter)->mime_types_ro; *ptr; ++ptr)
                 if (0 == strcmp(*ptr, mime))
+                {
+                    arc = malloc((*iter)->objectSize);
+                    arc->flags |= ARCHIVE_READ_ONLY;
                     return *iter;
+                }
     }
     return NULL;
 }
 
 FILE* loggerFile;
+
+//#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
+//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
+#define DEFAULT_PATH "/home/arthur/dev/firefox-QMPlay2.tar.gz"
 
 /* main program */
 int main(int argc, char **argv)
@@ -176,12 +187,13 @@ int main(int argc, char **argv)
     init_nc();
 
 
-    char *path = argc > 1 ? argv[1] : "/home/arthur/Downloads/cm/addonsu-arm-signed.zip" /*"/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"*/;
+    char *path = argc > 1 ? argv[1] : DEFAULT_PATH;
     const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
     printf("mime is %s\n", mime);
     const struct format_t *format = findFormat(mime);
-    arc = format->openArchive(format, path);
     arc->mime = mime;
+    arc->format = format;
+    format->openArchive(arc, path);
     arc->dir = format->listFiles(arc);
     if(!arc->dir)
     {

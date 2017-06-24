@@ -151,6 +151,9 @@ static int browse_key(int index, int ch)
                 free(files);
             }
             break;
+        case 'n':
+            compressdialog_init();
+            break;
         case 'i':
             nodeinfo_init(selected);
             break;

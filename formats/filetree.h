@@ -5,7 +5,7 @@
 
 #include <stdlib.h>
 
-struct dir_t *filetree_addNode(struct dir_t *root, char *path) __attribute__((malloc)) __attribute__ ((__nonnull__ (1,2)));
+struct dir_t *filetree_addNode(struct dir_t *root, char *path) __attribute__((malloc)) __attribute__ ((__nonnull__));
 void filetree_free(struct dir_t *root);
 
 enum SortFlags {
@@ -17,12 +17,12 @@ enum SortFlags {
 };
 extern uint8_t sort_flags;
 
-struct dir_t *filetree_sort(struct dir_t *list) __attribute__ ((__nonnull__ (1)));
+struct dir_t *filetree_sort(struct dir_t *list) __attribute__ ((__nonnull__));
 
-char *filetree_getpath(const struct dir_t *node) __attribute__ ((__nonnull__ (1)));
+char *filetree_getpath(const struct dir_t *node) __attribute__ ((__nonnull__));
 
 struct dir_t *filetree_createRoot() __attribute__((malloc));
 
-char **filetree_getArr(struct dir_t **nodes, unsigned nodes_size) __attribute__((malloc)) __attribute__ ((__nonnull__ (1)));
+char **filetree_getArr(struct dir_t **nodes, unsigned nodes_size) __attribute__((malloc)) __attribute__ ((__nonnull__));
 
 #endif // FILETREE_H

@@ -56,27 +56,42 @@ struct format_t {
     const char *name;
     const char *const *mime_types_rw;
     const char *const *mime_types_ro;
-    struct archive_t *(*openArchive)(const struct format_t *format, char *path) __attribute__ ((__nonnull__ (1,2)));
-    bool (*closeArchive)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
-    struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
-    bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__ (1,2,3)));
-    bool (*deleteFiles)(struct archive_t *archive, const char *const *files) __attribute__ ((__nonnull__ (1,2)));
-    bool (*testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__ (1)));
+
+    bool (*openArchive)(struct archive_t *archive, char *path) __attribute__ ((__nonnull__));
+    bool (*closeArchive)(struct archive_t *archive) __attribute__ ((__nonnull__));
+    bool (*setPassword)(struct archive_t *archive, const char *password) __attribute__ ((__nonnull__(1)));
+
+    struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
+    bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__));
+    bool (*deleteFiles)(struct archive_t *archive, const char *const *files) __attribute__ ((__nonnull__));
+    bool (*testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
+
+    size_t objectSize;
     uint8_t flags;
 };
 
 enum FormatFlags {
-    FORMAT_READ_ONLY = 0x1,
-    FORMAT_ENCRYPTION = 0x2,
-    FORMAT_SINGLE_FILE = 0x4,
+    FORMAT_READ_ONLY          = 0x1,
+    FORMAT_ENCRYPTION         = 0x2,
+    FORMAT_ENCRYPTION_HEADERS = 0x4,
+    FORMAT_SINGLE_FILE        = 0x8
+};
+
+struct compression_options_t
+{
+    char *password;
+    char *filename;
+    char *location;
+    bool encryptHeaders;
 };
 
 #define ADD_FORMAT(format)                            \
     static const struct format_t *ptr_##format              \
     __attribute((used, section("format_array"))) = (const struct format_t *)&format
 
-struct archive_t *format_default_openArchive(const struct format_t *format, char *path);
+bool format_default_openArchive(struct archive_t *archive, char *path);
 bool format_default_closeArchive(struct archive_t *archive);
 
+#define TYPE_MALLOC(type) (type *)malloc(sizeof(type))
 
 #endif // GLOBAL_H

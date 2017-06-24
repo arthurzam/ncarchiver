@@ -27,7 +27,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
         // insert new empty dir node
         if (root != (struct dir_t *)temp)
         {
-            temp = (struct dir_t *)malloc(sizeof(struct dir_t));
+            temp = TYPE_MALLOC(struct dir_t);
             *temp = (struct dir_t) {
                 .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
                 .moreInfo = NULL, .flags = NODE_ISDIR, .realSize = 0, .compressSize = 0, .items = 0
@@ -48,7 +48,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
 
     if (*start != '\0')
     {
-        temp = (struct dir_t *)malloc(sizeof(struct dir_t));
+        temp = TYPE_MALLOC(struct dir_t);
         *temp = (struct dir_t) {
             .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
             .moreInfo = NULL, .flags = 0, .realSize = 0, .compressSize = 0, .items = 0
@@ -193,7 +193,7 @@ char *filetree_getpath(const struct dir_t *node)
 
 struct dir_t *filetree_createRoot()
 {
-    struct dir_t *root = (struct dir_t *)malloc(sizeof(struct dir_t));
+    struct dir_t *root = TYPE_MALLOC(struct dir_t);
     *root = (struct dir_t){
         .parent = NULL, .prev = NULL, .next = NULL, .subs = NULL, .name = (char *)"/",
         .flags = NODE_ISDIR, .realSize = 0, .compressSize = 0, .items = 0

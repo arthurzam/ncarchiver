@@ -5,6 +5,8 @@
 #include <archive_entry.h>
 
 #include <stdio.h>
+#include <string.h>
+#include <strings.h>
 
 struct archive_libarchive_t {
 	struct archive_t a;
@@ -38,22 +40,88 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
     return true;
 }
 
-static struct archive_t *libarchive_openArchive(const struct format_t *_archive, char *path)
+static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool newFile, struct compression_options_t *options)
 {
-    struct archive_libarchive_t *archive = (struct archive_libarchive_t *)malloc(sizeof(struct archive_libarchive_t));
-    archive->a.path = path;
-    archive->a.dir = NULL;
-    archive->a.format = _archive;
-    archive->a.flags = 0;
-    archive->a.password = NULL;
-    archive->a.comment = NULL;
+    if (archive->writer)
+        archive_write_free(archive->writer);
+    archive->writer = archive_write_new();
+
+    if (!archive->writer)
+    {
+        LOG_e("libarchive", "The archive writer could not be initialized");
+        return false;
+    }
+
+    archive_write_set_format_pax_restricted(archive->writer);
+
+    int ret;
+    bool requiresExecutable;
+
+    if (newFile)
+    {
+        typedef int(*filterFunc)(struct archive *);
+        static const struct data_t{ const char *extension; filterFunc filter; } extenFilter[] = {
+            {"GZ", archive_write_add_filter_gzip},
+            {"BZ2", archive_write_add_filter_bzip2},
+            {"XZ", archive_write_add_filter_xz},
+            {"LZMA", archive_write_add_filter_lzma},
+            {".Z", archive_write_add_filter_compress},
+            {".LZ", archive_write_add_filter_lzip},
+            {"LZO", archive_write_add_filter_lzop},
+            {"LRZ", archive_write_add_filter_lrzip},
+            {"LZ4", archive_write_add_filter_lz4},
+            {"TAR", archive_write_add_filter_none},
+            {NULL, NULL}
+        };
+        const struct data_t *iter;
+        int len = strlen(archive->a.path);
+        for (iter = extenFilter; iter->extension != NULL; ++iter)
+        {
+            if (0 == strcasecmp(archive->a.path + len - strlen(iter->extension), iter->extension))
+            {
+                LOG_I("libarchive", "Detected %s compression for new file", iter->extension);
+                ret = iter->filter(archive->writer);
+                requiresExecutable = (iter->filter == archive_write_add_filter_lrzip);
+                break;
+            }
+        }
+        if (!iter->extension)
+        {
+            LOG_i("libarchive", "Falling back to gzip");
+            ret = archive_write_add_filter_gzip(archive->writer);
+        }
+    }
+    else
+    {
+        ret = archive_filter_code(archive->reader, 0);
+        requiresExecutable = (ret == ARCHIVE_FILTER_LRZIP);
+        ret = archive_write_add_filter(archive->writer, ret);
+    }
+
+    if (requiresExecutable ? ret != ARCHIVE_WARN : ret != ARCHIVE_OK)
+    {
+        LOG_E("libarchive", "Failed to set compression method: %s", archive_error_string(archive->writer));
+        return false;
+    }
+
+    if (newFile && options)
+    {
+        // TODO: Set compression level if passed in options.
+    }
+
+    return true;
+}
+
+static bool libarchive_openArchive(struct archive_t *_archive, char *path)
+{
+    struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
 
     archive->reader = archive_read_disk_new();
     archive_read_disk_set_standard_lookup(archive->reader);
 
     archive->writer = NULL;
 
-    return &archive->a;
+    return format_default_openArchive(&archive->a, path);
 }
 
 static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
@@ -93,6 +161,20 @@ static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
     return root;
 }
 
+bool libarchive_deleteFiles(struct archive_t *_archive, const char *const *files)
+{
+    struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
+
+    if (!_libarchive_initReader(archive))
+        return false;
+
+    if (!_libarchive_initWriter(archive, false, NULL))
+        return false;
+
+    // TODO: continue work
+    return false;
+}
+
 static bool libarchive_closeArchive(struct archive_t *_archive)
 {
     struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
@@ -105,10 +187,45 @@ static bool libarchive_closeArchive(struct archive_t *_archive)
     return format_default_closeArchive(_archive);
 }
 
+static const char *libarchive_mimes_ro[] = {
+    "application/x-deb",
+    "application/x-cd-image",
+    "application/x-bcpio",
+    "application/x-cpio",
+    "application/x-cpio-compressed",
+    "application/x-sv4cpio",
+    "application/x-sv4crc",
+    "application/x-rpm",
+    "application/x-source-rpm",
+    "application/vnd.debian.binary-package",
+    "application/vnd.ms-cab-compressed",
+    "application/x-xar",
+    "application/x-iso9660-appimage",
+    "application/x-archive",
+    NULL,
+};
+
+static const char *libarchive_mimes_rw[] = {
+    "application/x-tar",
+    "application/x-compressed-tar",
+    "application/x-bzip-compressed-tar",
+    "application/x-xz-compressed-tar",
+    "application/x-lzma-compressed-tar",
+    "application/x-lrzip-compressed-tar",
+    "application/x-lz4-compressed-tar",
+    "application/x-lzip-compressed-tar",
+    "application/x-tzo",
+    NULL
+};
+
 static const struct format_t libarchiveFormat = {
     .name = "libarchive",
+    .objectSize = sizeof(struct archive_libarchive_t),
+    .mime_types_rw = libarchive_mimes_rw,
+    .mime_types_ro = libarchive_mimes_ro,
     .openArchive = libarchive_openArchive,
     .listFiles = libarchive_listFiles,
+    .deleteFiles = libarchive_deleteFiles,
     .closeArchive = libarchive_closeArchive
 };
 

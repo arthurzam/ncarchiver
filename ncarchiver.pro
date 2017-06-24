@@ -48,4 +48,5 @@ SOURCES += \
     formats/filetree.c \
     formats/cli.c \
     formats/global.c \
-    formats/cli_7z.c
+    formats/cli_7z.c \
+    ui/compressdialog.c

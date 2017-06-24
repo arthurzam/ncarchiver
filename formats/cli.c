@@ -221,7 +221,9 @@ static bool _check_errors(const char* line, const char *const *patterns)
     {
         ret = regcomp(&re, *iter, REG_EXTENDED);
         if (ret != REG_NOERROR)
+        {
             LOG_E("cli regex", "Bad regex - %s", *iter);
+        }
         ret = regexec(&re, line, 0, NULL, 0);
         regfree(&re);
         if (ret == REG_NOERROR)
@@ -261,6 +263,7 @@ int cli_processLineErrors(struct archive_t *archive, const char *line, FILE *inF
     else if (_check_errors(line, cli_format->fileExistsPatterns))
     {
         int answer = prompt_overwrite(repeatingPath, flags);
+        repeatingPath[0] = '\0';
         if (cli_format->fileExistsInput[answer])
             fprintf(inF, "%s\n", cli_format->fileExistsInput[answer]);
         if (answer == 4)
