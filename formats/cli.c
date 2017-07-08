@@ -1,6 +1,7 @@
 #include "cli.h"
 #include "filetree.h"
 #include "prompt.h"
+#include "functions.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -133,41 +134,13 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
     return false;
 }
 
-static size_t arrlen(const char *const *arr) __attribute__((pure));
-static size_t arrlen(const char *const *arr)
+static char **cli_passwordArray(const char *const *arr, const char *str)
 {
-    if (!arr) return 0;
-    size_t size;
-    for (size = 0; *arr; ++size, ++arr);
-    return size;
-}
-
-static char **arrcpy(char **dst, char **src) __attribute__ ((__nonnull__ (1)));
-static char **arrcpy(char **dst, char **src)
-{
-    if (!src) return dst;
-    for (; *src; ++dst, ++src)
-        *dst = *src;
-    return dst;
-}
-
-static void arrfree(char **arr) __attribute__ ((__nonnull__ (1)));
-static void arrfree(char **arr)
-{
-    char **ptr;
-    for (ptr = arr; *ptr; ++ptr)
-        free(*ptr);
-    free(arr);
-}
-
-static char **cli_passwordArray(struct archive_t *_archive)
-{
-    struct cli_format_t *cli_format = (struct cli_format_t *)_archive->format;
-    size_t i, size = _archive->password ? arrlen(cli_format->passwordSwitch) : 0;
+    size_t i, size = str ? arrlen(arr) : 0;
     char **passArgv = (char **)malloc(sizeof(char *) * (1 + size));
     for (i = 0; i < size; i++)
     {
-        if (-1 == asprintf(passArgv + i, cli_format->passwordSwitch[i], _archive->password))
+        if (-1 == asprintf(passArgv + i, arr[i], str))
         {
             LOG_e("cli", "Error with asprintf");
             abort();
@@ -177,18 +150,15 @@ static char **cli_passwordArray(struct archive_t *_archive)
     return passArgv;
 }
 
-struct dir_t *cli_listFiles(struct archive_t *_archive)
+struct dir_t *cli_listFiles(struct archive_t *archive)
 {
-    struct cli_format_t *cli_format = (struct cli_format_t *)_archive->format;
+    struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
 
-    int size = 3 + arrlen(cli_format->listSwitch) + arrlen(cli_format->passwordSwitch), i;
-    char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
-    char **passArgv = cli_passwordArray(_archive);
-    argv[0] = getCorrectCommand(cli_format, CLI_LIST);
-    ptr = arrcpy(argv + 1, (char **)cli_format->listSwitch);
-    ptr = arrcpy(ptr, passArgv);
-    ptr[0] = _archive->path;
-    ptr[1] = NULL;
+    char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_LIST), NULL };
+    char *argv_path[] = { archive->path, NULL };
+    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv = arrcatdup(argv_cmd, cli_format->listSwitch, passArgv, argv_path, NULL);
+    int i;
 
     int pid, in, out;
     struct dir_t *root = NULL;
@@ -197,14 +167,14 @@ struct dir_t *cli_listFiles(struct archive_t *_archive)
         FILE *outF = fdopen(out, "r");
         FILE *inF = fdopen(in, "w");
         if (cli_format->processList)
-            root = cli_format->processList(_archive, inF, outF);
+            root = cli_format->processList(archive, inF, outF);
         fclose(inF);
         fclose(outF);
         kill(pid, SIGKILL);
         waitpid(pid, &i, 0);
     }
     arrfree(passArgv);
-    free(argv[0]);
+    free(argv_cmd[0]);
     free(argv);
     return root;
 }
@@ -219,7 +189,7 @@ static bool _check_errors(const char* line, const char *const *patterns)
 
     for (iter = patterns; *iter != NULL; ++iter)
     {
-        ret = regcomp(&re, *iter, REG_EXTENDED);
+        ret = regcomp(&re, *iter, REG_EXTENDED | REG_NOSUB);
         if (ret != REG_NOERROR)
         {
             LOG_E("cli regex", "Bad regex - %s", *iter);
@@ -332,15 +302,10 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv, const c
 bool cli_extractFiles(struct archive_t *archive, const char *const *files, const char *destinationFolder)
 {
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
-    int size = 3 + arrlen(cli_format->extractSwitch) + arrlen(cli_format->passwordSwitch) + arrlen(files);
-    char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
-    char **passArgv = cli_passwordArray(archive);
-    argv[0] = getCorrectCommand(cli_format, CLI_EXTRACT);
-    ptr = arrcpy(argv + 1, (char **)cli_format->extractSwitch);
-    ptr = arrcpy(ptr, passArgv);
-    *(ptr++) = archive->path;
-    ptr = arrcpy(ptr, (char **)files);
-    ptr[0] = NULL;
+    char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_EXTRACT), NULL };
+    char *argv_path[] = { archive->path, NULL };
+    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv = arrcatdup(argv_cmd, cli_format->extractSwitch, passArgv, argv_path, files, NULL);
 
     int res = cli_normal_runProcess(archive, argv, destinationFolder);
 
@@ -354,14 +319,10 @@ bool cli_extractFiles(struct archive_t *archive, const char *const *files, const
 bool cli_deleteFiles(struct archive_t *archive, const char *const *files)
 {
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
-    int size = 3 + arrlen(cli_format->delSwitch) + arrlen(cli_format->passwordSwitch) + arrlen(files);
-    char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
-    char **passArgv = cli_passwordArray(archive);
-    argv[0] = getCorrectCommand(cli_format, CLI_DELETE);
-    ptr = arrcpy(argv + 1, (char **)cli_format->delSwitch);
-    ptr = arrcpy(ptr, passArgv);
-    ptr = arrcpy(ptr, (char **)files);
-    ptr[0] = NULL;
+    char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_DELETE), NULL };
+    char *argv_path[] = { archive->path, NULL };
+    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv = arrcatdup(argv_cmd, cli_format->delSwitch, passArgv, argv_path, files, NULL);
 
     int res = cli_normal_runProcess(archive, argv, NULL);
 
@@ -375,19 +336,54 @@ bool cli_deleteFiles(struct archive_t *archive, const char *const *files)
 bool cli_testFiles(struct archive_t *archive)
 {
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
-    int size = 3 + arrlen(cli_format->delSwitch) + arrlen(cli_format->passwordSwitch);
-    char **argv = (char **)malloc(sizeof(char *) * size), **ptr;
-    char **passArgv = cli_passwordArray(archive);
-    argv[0] = getCorrectCommand(cli_format, CLI_TEST);
-    ptr = arrcpy(argv + 1, (char **)cli_format->delSwitch);
-    ptr = arrcpy(ptr, passArgv);
-    ptr[0] = NULL;
+    char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_TEST), NULL };
+    char *argv_path[] = { archive->path, NULL };
+    char **argv_pass = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv = arrcatdup(argv_cmd, cli_format->testSwitch, argv_pass, argv_path, NULL);
 
     int res = cli_normal_runProcess(archive, argv, NULL);
 
-    arrfree(passArgv);
+    arrfree(argv_pass);
     free(argv[0]);
     free(argv);
 
     return res;
+}
+
+static const char *_archive_mime_finder(const char *mime, const struct pMimeStr* args)
+{
+    for (; args->mime; args++)
+        if (0 == strcmp(args->mime, mime))
+            return args->str;
+    return NULL;
+}
+
+bool cli_addFiles(struct archive_t *archive, const char *const *files, const struct compression_options_t *options)
+{
+    struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
+    char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_ADD), NULL };
+    char *argv_path[] = { archive->path, NULL };
+    char **argv_pass = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char *argv_add[5];
+
+    int i = 0;
+    if (options->compressionLevel > -1)
+    {
+        char lev[] = "0";
+        lev[0] += options->compressionLevel;
+        asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->compressionLevelSwitch), lev);
+    }
+    if (options->compressionMethod > -1)
+        asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->compressionMethodSwitch), options->mime->compressionMethods[options->compressionMethod]);
+    if (options->encryptionMethod > -1)
+        asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->encryptionMethodSwitch), options->mime->encryptionMethods[options->encryptionMethod]);
+    argv_add[i] = NULL;
+
+    char **argv = arrcatdup(argv_cmd, cli_format->addSwitch, argv_pass, argv_add, argv_path, files, NULL);
+
+    for (i = 0; argv_add[i]; i++)
+        free(argv_add[i]);
+    free(argv[0]);
+    free(argv);
+    return true;
 }

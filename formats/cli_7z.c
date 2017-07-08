@@ -18,8 +18,24 @@ static const char *_7z_addSwitch[] = {"a", "-l", NULL};
 static const char *_7z_extractSwitch[] = {"x", NULL};
 static const char *_7z_delSwitch[] = {"d", "-bd", NULL};
 static const char *_7z_listSwitch[] = {"l", "-slt", "-bd", NULL};
-static const char *_7z_passwordSwitch[] = {"-p%s", NULL};
 static const char *_7z_testSwitch[] = {"t", "-bd", NULL};
+
+static const char *_7z_passwordSwitch[] = {"-p%s", NULL};
+static const struct pMimeStr _7z_compressionLevelSwitch[] = {
+    {"application/x-7z-compressed", "-mx=%s"},
+    {"application/zip", "-mx=%s"},
+    {NULL, NULL}
+};
+static const struct pMimeStr _7z_compressionMethodSwitch[] = {
+    {"application/x-7z-compressed", "-m0=%s"},
+    {"application/zip", "-mm=%s"},
+    {NULL, NULL}
+};
+static const struct pMimeStr _7z_encryptionMethodSwitch[] = {
+    {"application/x-7z-compressed", NULL},
+    {"application/zip", "-mem=%s"},
+    {NULL, NULL}
+};
 
 static const char *_7z_errorWrongPassword[] = {"Wrong password", NULL};
 static const char *_7z_errorCorruptedArchive[] = {"Unexpected end of archive", "Headers Error", NULL};
@@ -28,12 +44,6 @@ static const char *_7z_fileExistsPatterns[] = {
     "\\(Y\\)es / \\(N\\)o / \\(A\\)lways / \\(S\\)kip all / A\\(u\\)to rename all / \\(Q\\)uit",
     NULL};
 static const char *_7z_fileExistsFileName[] = {"^file \\./(.*)$", "^  Path:     \\./(.*)$", NULL};
-
-static const char *_7z_mimes[] = {
-    "application/x-7z-compressed",
-    "application/zip",
-    NULL
-};
 
 //static struct tm *mktime_from_string (char *str) // YY-MM-DD hh:mm:ss
 //{
@@ -174,11 +184,52 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     return root;
 }
 
+static const char *_7z_mime_encryptionMethods[] = {
+    "ZipCrypto",
+    "AES128",
+    "AES192",
+    "AES256",
+    NULL
+};
+
+static const char *_7z_mime_compressionMethods_7z[] = {
+    "BZip2",
+    "Copy",
+    "Deflate",
+    "LZMA",
+    "LZMA2",
+    "PPMd",
+    NULL
+};
+
+static const char *_7z_mime_compressionMethods_zip[] = {
+    "BZip2",
+    "Copy",
+    "Deflate",
+    "Deflate64",
+    "LZMA",
+    "PPMd",
+    NULL
+};
+
+static const struct mime_type_t _7z_mimes_rw[] = {
+    {   MIME_TYPE_FULL_NAME("application/x-7z-compressed", "7z", "7-zip archive"),
+        MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
+        MIME_TYPE_ENCRYPTION_NO,
+        MIME_TYPE_COMPRESSION_MET_VAL(_7z_mime_compressionMethods_7z, 4)
+    }, {MIME_TYPE_FULL_NAME("application/zip", "zip", "Zip archive"),
+        MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
+        MIME_TYPE_ENCRYPTION_VAL(_7z_mime_encryptionMethods    , 3),
+        MIME_TYPE_COMPRESSION_MET_VAL(_7z_mime_compressionMethods_zip, 2)
+    },
+    {MIME_TYPE_NULL}
+};
+
 static const struct cli_format_t cli_7z_proc = {
     .parent = {
         .name = "cli 7z",
         .objectSize = sizeof(struct archive_t),
-        .mime_types_rw = _7z_mimes,
+        .mime_types_rw = _7z_mimes_rw,
         .flags = FORMAT_ENCRYPTION | FORMAT_ENCRYPTION_HEADERS,
 
         .openArchive = format_default_openArchive,
@@ -186,6 +237,7 @@ static const struct cli_format_t cli_7z_proc = {
         .extractFiles = cli_extractFiles,
         .deleteFiles = cli_deleteFiles,
         .testFiles = cli_testFiles,
+        .addFiles = cli_addFiles,
         .closeArchive = format_default_closeArchive
     },
     .cmds = _7z_cmds,
@@ -195,8 +247,12 @@ static const struct cli_format_t cli_7z_proc = {
     .extractSwitch = _7z_extractSwitch,
     .delSwitch = _7z_delSwitch,
     .listSwitch = _7z_listSwitch,
-    .passwordSwitch = _7z_passwordSwitch,
     .testSwitch = _7z_testSwitch,
+
+    .passwordSwitch = _7z_passwordSwitch,
+    .compressionLevelSwitch = _7z_compressionLevelSwitch,
+    .compressionMethodSwitch = _7z_compressionMethodSwitch,
+    .encryptionMethodSwitch = _7z_encryptionMethodSwitch,
 
     .errorWrongPassword = _7z_errorWrongPassword,
     .errorCorruptedArchive = _7z_errorCorruptedArchive,

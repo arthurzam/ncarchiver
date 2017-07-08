@@ -71,7 +71,7 @@ static void prompt_draw(int index) {
     struct prompt_t *data = (struct prompt_t *)ui_data[index];
     unsigned col = 2, i;
 
-    nccreate(data->check_func ? 8 : 7, data->width, data->title);
+    nccreate(data->check_func ? 7 : 6, data->width, data->title);
 
     ncaddstr(2,2, data->prompt);
     if (data->check_func)

@@ -3,9 +3,11 @@ CONFIG += console link_pkgconfig
 CONFIG -= app_bundle qt
 PKGCONFIG += ncursesw libarchive
 
-DEFINES += HAVE_MMAP
+DEFINES += HAVE_MMAP HAVE_LOCALE_H
 
 INCLUDEPATH += $$PWD/formats $$PWD/ui
+
+QMAKE_CFLAGS += -Wextra
 
 HEADERS += \
     xdgmime/xdgmime.h \
@@ -25,7 +27,8 @@ HEADERS += \
     formats/global.h \
     formats/filetree.h \
     formats/cli.h \
-    formats/logging.h
+    formats/logging.h \
+    formats/functions.h
 
 SOURCES += \
     xdgmime/xdgmime.c \
@@ -43,10 +46,13 @@ SOURCES += \
     ui/prompt.c \
     ui/nodeinfo.c \
     ui/actions.c \
+    ui/compressdialog.c \
+    ui/fselect.c \
+    ui/prompt_list.c \
     \
     formats/libarchive.c \
     formats/filetree.c \
     formats/cli.c \
     formats/global.c \
     formats/cli_7z.c \
-    ui/compressdialog.c
+    formats/functions.c

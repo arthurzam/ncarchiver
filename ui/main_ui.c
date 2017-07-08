@@ -12,18 +12,7 @@
 
 #include <xdgmime/xdgmime.h>
 
-#define section_foreach_entry(section_name, type_t, elem)     \
-     for (type_t *elem =                                      \
-            ({                                                \
-                extern type_t __start_##section_name;         \
-                &__start_##section_name;                      \
-            });                                               \
-            elem !=                                           \
-            ({                                                \
-                extern type_t __stop_##section_name;          \
-                &__stop_##section_name;                       \
-            });                                               \
-            ++elem)
+
 
 // int read_only = 0;
 long update_delay = 100;
@@ -145,12 +134,12 @@ struct archive_t *arc;
 
 static const struct format_t *findFormat(const char *mime)
 {
-    const char *const *ptr;
     section_foreach_entry(format_array, const struct format_t *, iter)
     {
+        const struct mime_type_t *ptr;
         if ((*iter)->mime_types_rw)
-            for(ptr = (*iter)->mime_types_rw; *ptr; ++ptr)
-                if (0 == strcmp(*ptr, mime))
+            for(ptr = (*iter)->mime_types_rw; ptr->name; ++ptr)
+                if (0 == strcmp(ptr->name, mime))
                 {
                     arc = malloc((*iter)->objectSize);
                     return *iter;
@@ -158,6 +147,7 @@ static const struct format_t *findFormat(const char *mime)
     }
     section_foreach_entry(format_array, const struct format_t *, iter)
     {
+        const char *const *ptr;
         if ((*iter)->mime_types_ro)
             for(ptr = (*iter)->mime_types_ro; *ptr; ++ptr)
                 if (0 == strcmp(*ptr, mime))
@@ -172,9 +162,9 @@ static const struct format_t *findFormat(const char *mime)
 
 FILE* loggerFile;
 
-//#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
+#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
 //#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
-#define DEFAULT_PATH "/home/arthur/dev/firefox-QMPlay2.tar.gz"
+//#define DEFAULT_PATH "/home/arthur/dev/firefox-QMPlay2.tar.gz"
 
 /* main program */
 int main(int argc, char **argv)

@@ -20,6 +20,10 @@ enum CLI_USE {
     CLI_COUNT = 6
 };
 
+struct pMimeStr {
+    const char *mime;
+    const char *str;
+};
 struct cli_format_t {
     struct format_t parent;
 
@@ -33,6 +37,10 @@ struct cli_format_t {
     const char **testSwitch;
 
     const char **passwordSwitch;
+
+    const struct pMimeStr* compressionLevelSwitch;
+    const struct pMimeStr* compressionMethodSwitch;
+    const struct pMimeStr* encryptionMethodSwitch;
 
     const char *const *errorWrongPassword;
     const char *const *errorCorruptedArchive;
@@ -49,10 +57,11 @@ char *getCmdPath(const char *cmd) __attribute__((malloc)) __attribute__ ((__nonn
 bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **argv, const char *cwd) __attribute__ ((__nonnull__ (1, 4, 5)));
 
 int cli_processLineErrors(struct archive_t *archive, const char *line, FILE *inF, int *flags);
-struct dir_t *cli_listFiles(struct archive_t *_archive);
+struct dir_t *cli_listFiles(struct archive_t *archive);
 bool cli_extractFiles(struct archive_t *archive, const char *const *files, const char *destinationFolder);
 bool cli_deleteFiles(struct archive_t *archive, const char *const *files);
 bool cli_testFiles(struct archive_t *archive);
+bool cli_addFiles(struct archive_t *archive, const char *const *files, const struct compression_options_t *options);
 
 #define strstartswith(str, prefix) (strncmp(prefix, str, strlen(prefix)) == 0)
 

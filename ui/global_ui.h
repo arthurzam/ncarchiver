@@ -29,6 +29,8 @@ int input_handle(int);
 
 void browse_init(struct dir_t *base);
 void nodeinfo_init(struct dir_t *node);
-void compressdialog_init();
+struct compression_options_t *compressdialog_init();
+char *fselect_init(const char *path);
+unsigned prompt_list_init(const char *title, const char *const *items, unsigned defaultItem);
 
 #endif // GLOBAL_UI_H

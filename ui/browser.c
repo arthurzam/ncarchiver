@@ -2,6 +2,7 @@
 #include "global_ui.h"
 #include "filetree.h"
 #include "actions.h"
+#include "functions.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -62,6 +63,7 @@ static void browse_draw(int index) {
     mvhline(0, 0, ' ', wincols);
     mvhline(winrows-1, 0, ' ', wincols);
     mvprintw(0,0,"%s %s ~ Use the arrow keys to navigate, press ? for help", PACKAGE_NAME, PACKAGE_VERSION);
+    // TODO: print flags like [read only] [root]
     attroff(A_REVERSE);
 
     /* second line - the path */
@@ -146,13 +148,18 @@ static int browse_key(int index, int ch)
             {
                 char **files = filetree_getArr(selected_array, selected_size);
                 actions_openFiles((const char *const *)files);
-                for (unsigned i = 0; i < selected_size; ++i)
-                    free(files[i]);
-                free(files);
+                arrfree(files);
             }
             break;
         case 'n':
-            compressdialog_init();
+            if (selected_size > 0)
+            {
+                struct compression_options_t *options= compressdialog_init();
+                char **files = filetree_getArr(selected_array, selected_size);
+                arc->format->addFiles(arc, (const char *const *)files, options);
+                arrfree(files);
+                free(options);
+            }
             break;
         case 'i':
             nodeinfo_init(selected);

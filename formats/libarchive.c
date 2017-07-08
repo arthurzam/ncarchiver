@@ -61,16 +61,16 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
     {
         typedef int(*filterFunc)(struct archive *);
         static const struct data_t{ const char *extension; filterFunc filter; } extenFilter[] = {
-            {"GZ", archive_write_add_filter_gzip},
-            {"BZ2", archive_write_add_filter_bzip2},
-            {"XZ", archive_write_add_filter_xz},
+            {"GZ",   archive_write_add_filter_gzip},
+            {"BZ2",  archive_write_add_filter_bzip2},
+            {"XZ",   archive_write_add_filter_xz},
             {"LZMA", archive_write_add_filter_lzma},
-            {".Z", archive_write_add_filter_compress},
-            {".LZ", archive_write_add_filter_lzip},
-            {"LZO", archive_write_add_filter_lzop},
-            {"LRZ", archive_write_add_filter_lrzip},
-            {"LZ4", archive_write_add_filter_lz4},
-            {"TAR", archive_write_add_filter_none},
+            {".Z",   archive_write_add_filter_compress},
+            {".LZ",  archive_write_add_filter_lzip},
+            {"LZO",  archive_write_add_filter_lzop},
+            {"LRZ",  archive_write_add_filter_lrzip},
+            {"LZ4",  archive_write_add_filter_lz4},
+            {"TAR",  archive_write_add_filter_none},
             {NULL, NULL}
         };
         const struct data_t *iter;
@@ -205,17 +205,17 @@ static const char *libarchive_mimes_ro[] = {
     NULL,
 };
 
-static const char *libarchive_mimes_rw[] = {
-    "application/x-tar",
-    "application/x-compressed-tar",
-    "application/x-bzip-compressed-tar",
-    "application/x-xz-compressed-tar",
-    "application/x-lzma-compressed-tar",
-    "application/x-lrzip-compressed-tar",
-    "application/x-lz4-compressed-tar",
-    "application/x-lzip-compressed-tar",
-    "application/x-tzo",
-    NULL
+static const struct mime_type_t libarchive_mimes_rw[] = {
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-tar", "tar", "Tar uncompressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-compressed-tar", "tar.gz", "Tar compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-bzip-compressed-tar", "tar.bz", "Tar bzip compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-xz-compressed-tar", "tar.xz", "Tar xz compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-lzma-compressed-tar", "tar.lzma", "Tar lzma compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-lrzip-compressed-tar", "tar.lrz", "Tar lrzip compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-lz4-compressed-tar", "tar.lz4", "Tar lz4 compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-lzip-compressed-tar", "tar.lz", "Tar lzip compressed archive")},
+    {MIME_TYPE_FULL_NAME_ONLY("application/x-tzo", "tar.lzop", "Tar lzop compressed archive")},
+    {MIME_TYPE_NULL}
 };
 
 static const struct format_t libarchiveFormat = {
