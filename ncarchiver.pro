@@ -2,12 +2,13 @@ TEMPLATE = app
 CONFIG += console link_pkgconfig
 CONFIG -= app_bundle qt
 PKGCONFIG += ncursesw libarchive
+LIBS += -lmagic
 
 DEFINES += HAVE_MMAP HAVE_LOCALE_H
 
 INCLUDEPATH += $$PWD/formats $$PWD/ui
 
-QMAKE_CFLAGS += -Wextra
+QMAKE_CFLAGS += -Wextra -std=c99
 
 HEADERS += \
     xdgmime/xdgmime.h \

@@ -58,29 +58,23 @@ char *getCorrectCommand(const struct cli_format_t *format, int use)
     return res;
 }
 
-bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **argv, const char *cwd)
+bool start_subprocess(pid_t *pid, int *infd, int *outfd, const char *cmd, char **argv, const char *cwd)
 {
     int p1[2], p2[2];
     int flags;
 
-    if (infd == NULL || pipe(p1) != -1)
-    {
-        if (outfd == NULL || pipe(p2) != -1)
-        {
-            if ((*pid = fork()) != -1)
-            {
-                if (*pid) /* Parent process */
-                {
-                    if (infd != NULL)
-                    {
+    if (infd == NULL || pipe(p1) != -1) {
+        if (outfd == NULL || pipe(p2) != -1) {
+            if ((*pid = fork()) != -1) {
+                if (*pid) { /* Parent process */
+                    if (infd != NULL) {
                         *infd = p1[1];
 //                        if (-1 == (flags = fcntl(*infd, F_GETFL, 0)))
 //                            flags = 0;
 //                        fcntl(*infd, F_SETFL, flags | O_NONBLOCK);
                         close(p1[0]);
                     }
-                    if (outfd != NULL)
-                    {
+                    if (outfd != NULL) {
                         *outfd = p2[0];
                         if (-1 == (flags = fcntl(*outfd, F_GETFL, 0)))
                             flags = 0;
@@ -88,26 +82,19 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
                         close(p2[1]);
                     }
                     return true;
-                }
-                else /* Child process */
-                {
-                    if (infd != NULL)
-                    {
+                } else { /* Child process */
+                    if (infd != NULL) {
                         dup2(p1[0], STDIN_FILENO);
                         close(p1[0]);
                         close(p1[1]);
-                    }
-                    else
+                    } else
                         close(STDIN_FILENO);
-                    if (outfd != NULL)
-                    {
+                    if (outfd != NULL) {
                         dup2(p2[1], STDOUT_FILENO);
                         dup2(p2[1], STDERR_FILENO);
                         close(p2[0]);
                         close(p2[1]);
-                    }
-                    else
-                    {
+                    } else {
                         close(STDOUT_FILENO);
                         close(STDERR_FILENO);
                     }
@@ -119,14 +106,12 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
                     abort();
                 }
             }
-            if (outfd != NULL)
-            {
+            if (outfd != NULL) {
                 close(p2[1]);
                 close(p2[0]);
             }
         }
-        if (infd != NULL)
-        {
+        if (infd != NULL) {
             close(p1[1]);
             close(p1[0]);
         }
@@ -138,10 +123,8 @@ static char **cli_passwordArray(const char *const *arr, const char *str)
 {
     size_t i, size = str ? arrlen(arr) : 0;
     char **passArgv = (char **)malloc(sizeof(char *) * (1 + size));
-    for (i = 0; i < size; i++)
-    {
-        if (-1 == asprintf(passArgv + i, arr[i], str))
-        {
+    for (i = 0; i < size; i++) {
+        if (-1 == asprintf(passArgv + i, arr[i], str)) {
             LOG_e("cli", "Error with asprintf");
             abort();
         }
@@ -160,10 +143,10 @@ struct dir_t *cli_listFiles(struct archive_t *archive)
     char **argv = arrcatdup(argv_cmd, cli_format->listSwitch, passArgv, argv_path, NULL);
     int i;
 
-    int pid, in, out;
+    pid_t pid;
+    int in, out;
     struct dir_t *root = NULL;
-    if (start_subprocess(&pid, &in, &out, argv[0], argv, NULL))
-    {
+    if (start_subprocess(&pid, &in, &out, argv[0], argv, NULL)) {
         FILE *outF = fdopen(out, "r");
         FILE *inF = fdopen(in, "w");
         if (cli_format->processList)
@@ -187,18 +170,15 @@ static bool _check_errors(const char* line, const char *const *patterns)
     regex_t re;
     const char *const *iter;
 
-    for (iter = patterns; *iter != NULL; ++iter)
-    {
+    for (iter = patterns; *iter != NULL; ++iter) {
         ret = regcomp(&re, *iter, REG_EXTENDED | REG_NOSUB);
-        if (ret != REG_NOERROR)
-        {
+        if (ret != REG_NOERROR) {
             LOG_E("cli regex", "Bad regex - %s", *iter);
         }
         ret = regexec(&re, line, 0, NULL, 0);
         regfree(&re);
         if (ret == REG_NOERROR)
             return true;
-
     }
     return false;
 }
@@ -215,42 +195,32 @@ int cli_processLineErrors(struct archive_t *archive, const char *line, FILE *inF
 
     const char *const *iter;
 
-    if (_check_errors(line, cli_format->errorWrongPassword))
-    {
+    if (_check_errors(line, cli_format->errorWrongPassword)) {
         LOG_I("cli parse", "bad password %s for %s", archive->password, archive->path);
         return ARCHIVE_ERROR_BAD_PASSWORD;
-    }
-    else if (_check_errors(line, cli_format->errorCorruptedArchive))
-    {
+    } else if (_check_errors(line, cli_format->errorCorruptedArchive)) {
         LOG_I("cli parse", "corrupted archive %s", archive->path);
         return ARCHIVE_ERROR_CORRUPTED;
-    }
-    else if (_check_errors(line, cli_format->errorFullDisk))
-    {
+    } else if (_check_errors(line, cli_format->errorFullDisk)) {
         LOG_I("cli parse", "disk full for %s", archive->path);
         return ARCHIVE_ERROR_FULL_DISK;
-    }
-    else if (_check_errors(line, cli_format->fileExistsPatterns))
-    {
+    } else if (_check_errors(line, cli_format->fileExistsPatterns)) {
         int answer = prompt_overwrite(repeatingPath, flags);
         repeatingPath[0] = '\0';
         if (cli_format->fileExistsInput[answer])
             fprintf(inF, "%s\n", cli_format->fileExistsInput[answer]);
-        if (answer == 4)
-        {
+        if (answer == 4) {
             LOG_i("cli parse", "parsing was cancelled after file collision");
             return ARCHIVE_ERROR_CANCELED;
         }
         fflush(inF);
     }
 
-    for (iter = cli_format->fileExistsFileName; *iter != NULL; ++iter)
-    {
+    for (iter = cli_format->fileExistsFileName; *iter != NULL; ++iter) {
         regcomp(&re, *iter, REG_EXTENDED);
         i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
         regfree(&re);
-        if (i == REG_NOERROR)
-        {
+        if (i == REG_NOERROR) {
             i = matches[1].rm_eo - matches[1].rm_so;
             repeatingPath = (char *)realloc(repeatingPath, i + 1);
             memcpy(repeatingPath, line + matches[1].rm_so, i);
@@ -267,20 +237,18 @@ static int cli_normal_runProcess(struct archive_t *archive, char **argv, const c
 {
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
 
-    int pid, out, in;
+    pid_t pid;
+    int in, out;
     FILE *outF, *inF;
-    char line[2048 + 1];
-    line[sizeof(line) - 1] = '\0';
     int res = ARCHIVE_ERROR_NO;
     int flags = 0;
-    if (start_subprocess(&pid, &in, &out, argv[0], argv, cwd))
-    {
+    if (start_subprocess(&pid, &in, &out, argv[0], argv, cwd)) {
         inF = fdopen(in, "w");
         outF = fdopen(out, "r");
-        while (!feof(outF) && res == ARCHIVE_ERROR_NO)
-        {
-            if (NULL == fgets(line, sizeof(line) - 1, outF))
-            {
+        char line[2048 + 1];
+        line[sizeof(line) - 1] = '\0';
+        while (!feof(outF) && res == ARCHIVE_ERROR_NO) {
+            if (NULL == fgets(line, sizeof(line) - 1, outF)) {
                 if (errno == EAGAIN)
                     continue;
             }
@@ -363,12 +331,11 @@ bool cli_addFiles(struct archive_t *archive, const char *const *files, const str
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_ADD), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **argv_pass = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv_pass = cli_passwordArray(options->encryptHeaders ? cli_format->passwordHeadersSwitch : cli_format->passwordSwitch, archive->password ?: options->password);
     char *argv_add[5];
 
     int i = 0;
-    if (options->compressionLevel > -1)
-    {
+    if (options->compressionLevel > -1) {
         char lev[] = "0";
         lev[0] += options->compressionLevel;
         asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->compressionLevelSwitch), lev);
@@ -381,9 +348,11 @@ bool cli_addFiles(struct archive_t *archive, const char *const *files, const str
 
     char **argv = arrcatdup(argv_cmd, cli_format->addSwitch, argv_pass, argv_add, argv_path, files, NULL);
 
+    int res = cli_normal_runProcess(archive, argv, NULL);
+
     for (i = 0; argv_add[i]; i++)
         free(argv_add[i]);
     free(argv[0]);
     free(argv);
-    return true;
+    return res;
 }

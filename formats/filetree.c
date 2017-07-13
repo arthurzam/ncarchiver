@@ -10,23 +10,19 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
 
     for (; *start == '/'; ++start);
 
-    while ((end = strchr(start, '/')) != NULL)
-    {
+    while ((end = strchr(start, '/')) != NULL) {
         *end = '\0';
 
         // search for this dir
-        for (temp = root->subs; temp; temp = temp->next)
-        {
-            if (strcmp(temp->name, start) == 0)
-            {
+        for (temp = root->subs; temp; temp = temp->next) {
+            if (strcmp(temp->name, start) == 0) {
                 root = (struct dir_t *)temp;
                 break;
             }
         }
 
         // insert new empty dir node
-        if (root != (struct dir_t *)temp)
-        {
+        if (root != (struct dir_t *)temp) {
             temp = TYPE_MALLOC(struct dir_t);
             *temp = (struct dir_t) {
                 .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
@@ -46,8 +42,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
         for (; *start == '/'; ++start);
     }
 
-    if (*start != '\0')
-    {
+    if (*start != '\0') {
         temp = TYPE_MALLOC(struct dir_t);
         *temp = (struct dir_t) {
             .parent = root, .prev = NULL, .next = root->subs, .subs = NULL, .name = strdup(start),
@@ -69,12 +64,10 @@ void filetree_free(struct dir_t *root)
     if (!root)
         return;
 
-    for (node = root->subs; node; node = next)
-    {
+    for (node = root->subs; node; node = next) {
         next = node->next;
         free(node->name);
-        if (node->moreInfo)
-        {
+        if (node->moreInfo) {
             for (moreInfo = node->moreInfo; moreInfo->key; ++moreInfo)
                 free(moreInfo->value);
             free(node->moreInfo);
@@ -90,10 +83,8 @@ uint8_t sort_flags = SORT_DIRS_FIRST | SORT_COL_NAME;
 
 static int filetree_cmp(struct dir_t *x, struct dir_t *y)
 {
-    if (sort_flags & SORT_DIRS_FIRST)
-    {
-        if ((x->flags & NODE_ISDIR) != (y->flags & NODE_ISDIR))
-        {
+    if (sort_flags & SORT_DIRS_FIRST) {
+        if ((x->flags & NODE_ISDIR) != (y->flags & NODE_ISDIR)) {
             return ((x->flags & NODE_ISDIR) ? -1 : 1);
         }
     }
@@ -101,50 +92,50 @@ static int filetree_cmp(struct dir_t *x, struct dir_t *y)
 }
 
 struct dir_t *filetree_sort(struct dir_t *list) {
-  struct dir_t *p, *q, *e, *tail;
-  int insize, nmerges, psize, qsize, i;
+    struct dir_t *p, *q, *e, *tail;
+    int insize, nmerges, psize, qsize, i;
 
-  insize = 1;
-  while(1) {
-    p = list;
-    list = NULL;
-    tail = NULL;
-    nmerges = 0;
-    while(p) {
-      nmerges++;
-      q = p;
-      psize = 0;
-      for(i=0; i<insize; i++) {
-        psize++;
-        q = q->next;
-        if(!q) break;
-      }
-      qsize = insize;
-      while(psize > 0 || (qsize > 0 && q)) {
-        if(psize == 0) {
-          e = q; q = q->next; qsize--;
-        } else if(qsize == 0 || !q) {
-          e = p; p = p->next; psize--;
-        } else if(filetree_cmp(p,q) <= 0) {
-          e = p; p = p->next; psize--;
-        } else {
-          e = q; q = q->next; qsize--;
+    insize = 1;
+    while(1) {
+        p = list;
+        list = NULL;
+        tail = NULL;
+        nmerges = 0;
+        while(p) {
+            nmerges++;
+            q = p;
+            psize = 0;
+            for(i=0; i<insize; i++) {
+                psize++;
+                q = q->next;
+                if(!q) break;
+            }
+            qsize = insize;
+            while(psize > 0 || (qsize > 0 && q)) {
+                if(psize == 0) {
+                    e = q; q = q->next; qsize--;
+                } else if(qsize == 0 || !q) {
+                    e = p; p = p->next; psize--;
+                } else if(filetree_cmp(p,q) <= 0) {
+                    e = p; p = p->next; psize--;
+                } else {
+                    e = q; q = q->next; qsize--;
+                }
+                if(tail) tail->next = e;
+                else     list = e;
+                e->prev = tail;
+                tail = e;
+            }
+            p = q;
         }
-        if(tail) tail->next = e;
-        else     list = e;
-        e->prev = tail;
-        tail = e;
-      }
-      p = q;
+        tail->next = NULL;
+        if(nmerges <= 1) {
+            if(list->parent)
+                list->parent->subs = list;
+            return list;
+        }
+        insize *= 2;
     }
-    tail->next = NULL;
-    if(nmerges <= 1) {
-      if(list->parent)
-        list->parent->subs = list;
-      return list;
-    }
-    insize *= 2;
-  }
 }
 
 char *filetree_getpath(const struct dir_t *node)
@@ -159,19 +150,15 @@ char *filetree_getpath(const struct dir_t *node)
         return "/";
 
     c = i = 1;
-    for (d = node; d; d = d->parent)
-    {
+    for (d = node; d; d = d->parent) {
         i += strlen(d->name)+1;
         c++;
     }
 
-    if (pathLen == 0)
-    {
+    if (pathLen == 0) {
         path = malloc(i);
         pathLen = i;
-    }
-    else if (pathLen < i)
-    {
+    } else if (pathLen < i) {
         path = realloc(path, i);
         pathLen = i;
     }
@@ -181,8 +168,7 @@ char *filetree_getpath(const struct dir_t *node)
         list[c] = d;
 
     path[0] = '\0';
-    while (c--)
-    {
+    while (c--) {
         strcat(path, list[c]->name);
         if (list[c]->parent && (list[c]->flags & NODE_ISDIR))
             strcat(path, "/");

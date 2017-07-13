@@ -33,32 +33,26 @@ static int prompt_key(int index, int key) {
         case KEY_BACKSPACE:
         case 0x7f: // DEL
             i = data->res ? strlen(data->res) : 0;
-            if (i > 0)
-            {
+            if (i > 0) {
                 data->res = realloc(data->res, i - 1);
                 if (data->res)
                     data->res[i - 1] = '\0';
             }
             return 0;
     }
-    if (!data->check_func)
-    {
+    if (!data->check_func) {
         if (isalpha(key))
             for (i = 0; data->buttons[i] != NULL; ++i)
-                if (tolower(key) == data->buttons[i][0])
-                {
+                if (tolower(key) == data->buttons[i][0]) {
                     data->selected_button = i;
                     return 1;
                 }
         for (i = 0; data->buttons[i] != NULL; ++i)
-            if (data->buttons[i][0] == '\x1')
-            {
+            if (data->buttons[i][0] == '\x1') {
                 data->selected_button = i;
                 return 1;
             }
-    }
-    else if (data->check_func(key))
-    {
+    } else if (data->check_func(key)) {
         i = data->res ? strlen(data->res) : 0;
         data->res = realloc(data->res, i + 2);
         data->res[i] = key;
@@ -74,8 +68,7 @@ static void prompt_draw(int index) {
     nccreate(data->check_func ? 7 : 6, data->width, data->title);
 
     ncaddstr(2,2, data->prompt);
-    if (data->check_func)
-    {
+    if (data->check_func) {
         attron(A_REVERSE);
         i = data->res ? strlen(data->res) : 0;
         i = i > data->width - 4 ? i - data->width + 4 : 0;
@@ -83,8 +76,7 @@ static void prompt_draw(int index) {
         attroff(A_REVERSE);
     }
 
-    for (i = 0; data->buttons[i] != NULL; ++i)
-    {
+    for (i = 0; data->buttons[i] != NULL; ++i) {
         if (i == data->selected_button)
             attron(A_REVERSE);
         if (data->check_func)

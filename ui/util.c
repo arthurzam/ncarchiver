@@ -78,8 +78,7 @@ char *formatsize(int64_t from) {
     else if(r < 1e18f){ c = 'P'; r/=1e15f; }
     else              { c = 'E'; r/=1e18f; }
     sprintf(dat, "%5.1f %cB", r, c);
-  }
-  else {
+  } else {
     if(r < 1000.0f)      { }
     else if(r < 1023e3f) { c = 'K'; r/=1024.0f; }
     else if(r < 1023e6f) { c = 'M'; r/=1048576.0f; }

@@ -50,8 +50,7 @@ static void prompt_list_draw(int index) {
 
     nccreate(data->items_size + 6, data->width, data->title);
 
-    for (i = 0; i < data->items_size; ++i)
-    {
+    for (i = 0; i < data->items_size; ++i) {
         if (data->selected_item == i)
             attron(A_REVERSE);
         ncaddstr(i + 2, 2, data->items[i]);
@@ -76,8 +75,7 @@ unsigned prompt_list_init(const char *title, const char *const *items, unsigned 
     unsigned width = 15, t = strlen(title) + 6;
     if (t > 15)
         width = t;
-    for (ptr = items; *ptr; ptr++)
-    {
+    for (ptr = items; *ptr; ptr++) {
         t = strlen(*ptr) + 4;
         if (t > width)
             width = t;

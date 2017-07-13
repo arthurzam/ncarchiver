@@ -142,6 +142,7 @@ static const struct format_t *findFormat(const char *mime)
                 if (0 == strcmp(ptr->name, mime))
                 {
                     arc = malloc((*iter)->objectSize);
+                    arc->flags = 0;
                     return *iter;
                 }
     }
@@ -166,9 +167,23 @@ FILE* loggerFile;
 //#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
 //#define DEFAULT_PATH "/home/arthur/dev/firefox-QMPlay2.tar.gz"
 
+#include <magic.h>
+
 /* main program */
 int main(int argc, char **argv)
 {
+#ifdef TEST_MAGIC
+    magic_t magic_cookie = magic_open(MAGIC_MIME_TYPE);
+    magic_load(magic_cookie, NULL);
+    for (int i = 1; i < argc; i++)
+    {
+        printf("%s -> %s\n", argv[i], magic_file(magic_cookie, argv[i]));
+    }
+    magic_close(magic_cookie);
+    return 0;
+#endif
+
+
     loggerFile = fopen("/tmp/ncarchiver.log", "w");
     read_locale();
 //  argv_parse(argc, argv);

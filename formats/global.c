@@ -7,7 +7,6 @@ bool format_default_openArchive(struct archive_t *archive, char *path)
 {
     archive->path = strdup(path);
     archive->dir = NULL;
-    archive->flags = 0;
     archive->password = NULL;
     archive->comment = NULL;
 

@@ -24,11 +24,9 @@ bool actions_openFiles(const char *const *files)
     fullPath[19] = '/';
     fullPath[20] = '\0';
 
-    for (ptr = files; res && *ptr != NULL; ++ptr)
-    {
+    for (ptr = files; res && *ptr != NULL; ++ptr) {
         strcpy(fullPath + 20, *ptr);
-        switch (pid = fork())
-        {
+        switch (pid = fork()) {
             case -1:
                 return false;
             case 0:

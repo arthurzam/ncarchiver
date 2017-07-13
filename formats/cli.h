@@ -37,6 +37,7 @@ struct cli_format_t {
     const char **testSwitch;
 
     const char **passwordSwitch;
+    const char **passwordHeadersSwitch;
 
     const struct pMimeStr* compressionLevelSwitch;
     const struct pMimeStr* compressionMethodSwitch;

@@ -31,8 +31,7 @@ char **arrcatdup(char **arr, ...) {
     va_start(args, arr);
 
     va_copy(args_size, args);
-    while (arg != NULL)
-    {
+    while (arg != NULL) {
         size += arrlen((const char *const *)arg);
         arg = va_arg(args_size, char**);
     }
@@ -40,8 +39,7 @@ char **arrcatdup(char **arr, ...) {
 
     ptr = res = (char **)malloc(sizeof(char *) * size);
     arg = arr;
-    while (arg != NULL)
-    {
+    while (arg != NULL) {
         ptr = arrcpy(ptr, arg);
         arg = va_arg(args, char**);
     }

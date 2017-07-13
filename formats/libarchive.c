@@ -19,8 +19,7 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
         archive_read_free(archive->reader);
     archive->reader = archive_read_new();
 
-    if (!archive->reader)
-    {
+    if (!archive->reader) {
         LOG_e("libarchive", "The archive reader could not be initialized");
         return false;
     }
@@ -31,8 +30,7 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
     if (archive_read_support_format_all(archive->reader) != ARCHIVE_OK)
         return false;
 
-    if (archive_read_open_filename(archive->reader, archive->a.path, 10240) != ARCHIVE_OK)
-    {
+    if (archive_read_open_filename(archive->reader, archive->a.path, 10240) != ARCHIVE_OK) {
         LOG_E("libarchive", "Could not open the archive: %s", archive_error_string(archive->reader));
         return false;
     }
@@ -46,8 +44,7 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
         archive_write_free(archive->writer);
     archive->writer = archive_write_new();
 
-    if (!archive->writer)
-    {
+    if (!archive->writer) {
         LOG_e("libarchive", "The archive writer could not be initialized");
         return false;
     }
@@ -57,10 +54,9 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
     int ret;
     bool requiresExecutable;
 
-    if (newFile)
-    {
+    if (newFile) {
         typedef int(*filterFunc)(struct archive *);
-        static const struct data_t{ const char *extension; filterFunc filter; } extenFilter[] = {
+        static const struct data_t { const char *extension; filterFunc filter; } extenFilter[] = {
             {"GZ",   archive_write_add_filter_gzip},
             {"BZ2",  archive_write_add_filter_bzip2},
             {"XZ",   archive_write_add_filter_xz},
@@ -75,37 +71,30 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
         };
         const struct data_t *iter;
         int len = strlen(archive->a.path);
-        for (iter = extenFilter; iter->extension != NULL; ++iter)
-        {
-            if (0 == strcasecmp(archive->a.path + len - strlen(iter->extension), iter->extension))
-            {
+        for (iter = extenFilter; iter->extension != NULL; ++iter) {
+            if (0 == strcasecmp(archive->a.path + len - strlen(iter->extension), iter->extension)) {
                 LOG_I("libarchive", "Detected %s compression for new file", iter->extension);
                 ret = iter->filter(archive->writer);
                 requiresExecutable = (iter->filter == archive_write_add_filter_lrzip);
                 break;
             }
         }
-        if (!iter->extension)
-        {
+        if (!iter->extension) {
             LOG_i("libarchive", "Falling back to gzip");
             ret = archive_write_add_filter_gzip(archive->writer);
         }
-    }
-    else
-    {
+    } else {
         ret = archive_filter_code(archive->reader, 0);
         requiresExecutable = (ret == ARCHIVE_FILTER_LRZIP);
         ret = archive_write_add_filter(archive->writer, ret);
     }
 
-    if (requiresExecutable ? ret != ARCHIVE_WARN : ret != ARCHIVE_OK)
-    {
+    if (requiresExecutable ? ret != ARCHIVE_WARN : ret != ARCHIVE_OK) {
         LOG_E("libarchive", "Failed to set compression method: %s", archive_error_string(archive->writer));
         return false;
     }
 
-    if (newFile && options)
-    {
+    if (newFile && options) {
         // TODO: Set compression level if passed in options.
     }
 
@@ -138,18 +127,14 @@ static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
     struct archive_entry *aentry;
     int result = ARCHIVE_RETRY;
 
-    while ((result = archive_read_next_header(archive->reader, &aentry)) == ARCHIVE_OK)
-    {
+    while ((result = archive_read_next_header(archive->reader, &aentry)) == ARCHIVE_OK) {
         const char *path = archive_entry_pathname_utf8(aentry);
 
         temp = filetree_addNode(root, (char*)path);
-        if (S_ISDIR(archive_entry_mode(aentry)))
-        {
+        if (S_ISDIR(archive_entry_mode(aentry))) {
             temp->realSize = temp->compressSize = 0;
             temp->flags |= NODE_ISDIR;
-        }
-        else
-        {
+        } else {
             temp->realSize = archive_entry_size(aentry);
         }
 

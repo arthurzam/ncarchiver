@@ -23,8 +23,7 @@ struct fselect_t {
     int flags;
 };
 
-static int _sort_strcmp(const void *_a, const void *_b)
-{
+static int _sort_strcmp(const void *_a, const void *_b) {
     const char *a = *(const char **)_a;
     const char *b = *(const char **)_b;
     if (a[0] == '/' && b[0] != '/')
@@ -34,13 +33,11 @@ static int _sort_strcmp(const void *_a, const void *_b)
     return strcmp(a, b);
 }
 
-static char **getDirContent(const char *path, int flags)
-{
+static char **getDirContent(const char *path, int flags) {
     unsigned arr_len = 0, len;
     char **arr = NULL;
     const bool isRoot = path[0] == '/' && path[1] == '\0';
-    if (!isRoot)
-    {
+    if (!isRoot) {
         arr = (char **)malloc(sizeof(char *) * 2);
         arr[0] = strdup("/..");
         arr[1] = NULL;
@@ -53,8 +50,7 @@ static char **getDirContent(const char *path, int flags)
 
     struct dirent *ent;
 
-    while ((ent = readdir(dir)))
-    {
+    while ((ent = readdir(dir))) {
         if(ent->d_name[0] == '.' && (ent->d_name[1] == '\0' || (ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
             continue;
         if ((flags & 0x1) && ent->d_type != DT_DIR) // dirs only
@@ -82,8 +78,7 @@ static int fselect_key(int index, int key) {
     struct fselect_t *data = (struct fselect_t *)ui_data[index];
     const unsigned maxItems = MIN(WIN_MAX_HEIGHT - 7, data->items_count);
     char *ptr;
-    switch (key)
-    {
+    switch (key) {
         case KEY_HOME:
             data->selected_row = 0;
             data->first_row = 0;
@@ -128,17 +123,13 @@ static int fselect_key(int index, int key) {
             if (data->selected_row < 0)
                 return 1;
             ptr = data->items[data->first_row + data->selected_row];
-            if (ptr[0] == '/')
-            {
-                if (0 == strcmp(ptr, "/.."))
-                {
+            if (ptr[0] == '/') {
+                if (0 == strcmp(ptr, "/..")) {
                     if (data->path != (ptr = strrchr(data->path, '/')))
                         *ptr = '\0';
                     else
                         data->path[1] = '\0';
-                }
-                else
-                {
+                } else {
                     data->path = (char *)realloc(data->path, strlen(data->path) + strlen(ptr) + 1);
                     if (data->path[1] != '\0')
                         strcat(data->path, ptr);
@@ -167,8 +158,7 @@ static void fselect_draw(int index) {
     ncprint(2, 2, "%-*s", WIN_WIDTH - 4, data->path);
     attroff(A_REVERSE);
 
-    for (i = 0; i < (int)(height - 7); ++i)
-    {
+    for (i = 0; i < (int)(height - 7); ++i) {
         if (i == data->selected_row)
             attron(A_REVERSE);
         ncaddstr(4 + i, 2, cropstr(data->items[data->first_row + i], WIN_WIDTH - 5));

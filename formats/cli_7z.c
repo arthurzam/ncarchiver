@@ -21,6 +21,7 @@ static const char *_7z_listSwitch[] = {"l", "-slt", "-bd", NULL};
 static const char *_7z_testSwitch[] = {"t", "-bd", NULL};
 
 static const char *_7z_passwordSwitch[] = {"-p%s", NULL};
+static const char *_7z_passwordHeadersSwitch[] = {"-mhe=on", "-p%s", NULL};
 static const struct pMimeStr _7z_compressionLevelSwitch[] = {
     {"application/x-7z-compressed", "-mx=%s"},
     {"application/zip", "-mx=%s"},
@@ -74,16 +75,14 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     char line[2048 + 1];
     line[sizeof(line) - 1] = '\0';
 
-    while (!feof(outF))
-    {
+    while (!feof(outF)) {
         fgets(line, sizeof(line) - 1, outF);
         line[strlen(line) - 1] = '\0'; // remove new line
 
         if (*line == '\0')
             continue;
 
-        switch (state)
-        {
+        switch (state) {
             case 0: // parse title
                 i = regexec(&re, line, sizeof(matches) / sizeof(matches[0]), (regmatch_t *)&matches, 0);
                 if (i == REG_NOERROR)
@@ -99,15 +98,12 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     LOG_I("7z", "listing archive: %s", line + 16);
                 else if (0 == strcmp(line, "--") || 0 == strcmp(line, "----"))
                     state = 2;
-                else if (strstartswith(line, "Enter password (will not be echoed)"))
-                {
+                else if (strstartswith(line, "Enter password (will not be echoed)")) {
                     archive->flags |= ARCHIVE_ENCRYPTED;
                     archive->error = ARCHIVE_ERROR_BAD_PASSWORD;
                     LOG_e("7z", "missing password");
                     return NULL;
-                }
-                else if (NULL != strstr(line, "Error: "))
-                {
+                } else if (NULL != strstr(line, "Error: ")) {
                     LOG_E("7z", "error parsing header: %s", line + 7);
                     return NULL;
                 }
@@ -119,8 +115,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     LOG_I("7z", "type: %s", line + 7);
                 else if (strstartswith(line, "Method = "))
                     LOG_I("7z", "method: %s", line + 9);
-                else if (strstartswith(line, "Comment = "))
-                {
+                else if (strstartswith(line, "Comment = ")) {
                     arr_len = strlen(line + 10);
                     archive->comment = (char *)malloc(arr_size = arr_len + arr_len / 2);
                     memcpy(archive->comment, line + 10, arr_len);
@@ -132,8 +127,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
             case 3: // parse comment
                 if (0 == strcmp(line, "----------"))
                     state = 4;
-                else
-                {
+                else {
                     size_t addlen = strlen(line);
                     if (arr_len + addlen + 10 >= arr_size)
                         archive->comment = realloc(archive->comment, arr_size += (addlen + 10));
@@ -145,29 +139,22 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 if (!root)
                     root = filetree_createRoot();
 
-                if (strstartswith(line, "Path = "))
-                {
+                if (strstartswith(line, "Path = ")) {
                     temp = filetree_addNode(root, line + 7);
                     arr_size = arr_len = 0;
-                }
-                else if (strstartswith(line, "Size = "))
+                } else if (strstartswith(line, "Size = "))
                     temp->realSize = atoi(line + 7);
-                else if (strstartswith(line, "CRC = "))
-                {
+                else if (strstartswith(line, "CRC = ")) {
                     if (line[6] == '\0') break;
                     if (arr_size < arr_len + 1)
                         temp->moreInfo = (struct dir_more_info_t *)realloc(temp->moreInfo, sizeof(struct dir_more_info_t) * (arr_size += 3));
                     temp->moreInfo[arr_len].key = "CRC";
                     temp->moreInfo[arr_len].value = strdup(line + 6);
                     temp->moreInfo[++arr_len].key = NULL;
-                }
-                else if (strstartswith(line, "Encrypted = "))
-                {
+                } else if (strstartswith(line, "Encrypted = ")) {
                     if (0 == strcmp(line + 12, "+"))
                         archive->flags |= ARCHIVE_ENCRYPTED;
-                }
-                else if (strstartswith(line, "Modified = "))
-                {
+                } else if (strstartswith(line, "Modified = ")) {
                     if (line[11] == '\0') break;
                     if (arr_size < arr_len + 1)
                         temp->moreInfo = (struct dir_more_info_t *)realloc(temp->moreInfo, sizeof(struct dir_more_info_t) * (arr_size += 3));
@@ -184,43 +171,15 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     return root;
 }
 
-static const char *_7z_mime_encryptionMethods[] = {
-    "ZipCrypto",
-    "AES128",
-    "AES192",
-    "AES256",
-    NULL
-};
-
-static const char *_7z_mime_compressionMethods_7z[] = {
-    "BZip2",
-    "Copy",
-    "Deflate",
-    "LZMA",
-    "LZMA2",
-    "PPMd",
-    NULL
-};
-
-static const char *_7z_mime_compressionMethods_zip[] = {
-    "BZip2",
-    "Copy",
-    "Deflate",
-    "Deflate64",
-    "LZMA",
-    "PPMd",
-    NULL
-};
-
 static const struct mime_type_t _7z_mimes_rw[] = {
     {   MIME_TYPE_FULL_NAME("application/x-7z-compressed", "7z", "7-zip archive"),
         MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
         MIME_TYPE_ENCRYPTION_NO,
-        MIME_TYPE_COMPRESSION_MET_VAL(_7z_mime_compressionMethods_7z, 4)
+        MIME_TYPE_COMPRESSION_MET_VAL(STRING_ARR("BZip2", "Copy", "Deflate", "LZMA", "LZMA2", "PPMd"), 4)
     }, {MIME_TYPE_FULL_NAME("application/zip", "zip", "Zip archive"),
         MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
-        MIME_TYPE_ENCRYPTION_VAL(_7z_mime_encryptionMethods    , 3),
-        MIME_TYPE_COMPRESSION_MET_VAL(_7z_mime_compressionMethods_zip, 2)
+        MIME_TYPE_ENCRYPTION_VAL(STRING_ARR("ZipCrypto", "AES128", "AES192", "AES256"), 3),
+        MIME_TYPE_COMPRESSION_MET_VAL(STRING_ARR("BZip2", "Copy", "Deflate", "Deflate64", "LZMA", "PPMd"), 2)
     },
     {MIME_TYPE_NULL}
 };
@@ -250,6 +209,7 @@ static const struct cli_format_t cli_7z_proc = {
     .testSwitch = _7z_testSwitch,
 
     .passwordSwitch = _7z_passwordSwitch,
+    .passwordHeadersSwitch = _7z_passwordHeadersSwitch,
     .compressionLevelSwitch = _7z_compressionLevelSwitch,
     .compressionMethodSwitch = _7z_compressionMethodSwitch,
     .encryptionMethodSwitch = _7z_encryptionMethodSwitch,

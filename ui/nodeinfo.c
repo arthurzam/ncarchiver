@@ -14,8 +14,7 @@ static int nodeinfo_key(int index, int ch) {
     switch (ch) {
         case 'd':
         case 'D':
-            if (prompy_yesno("Delete file", "Are you sure you want to delete this file?", 46))
-            {
+            if (prompy_yesno("Delete file", "Are you sure you want to delete this file?", 46)) {
                 files[0] = filetree_getpath(node) + 1;
                 // TODO: delete file
                 // arc->format->deleteFiles(arc, files);

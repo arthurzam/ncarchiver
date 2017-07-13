@@ -12,14 +12,10 @@
 
 
 // static int graph = 1, show_as = 0, info_show = 0, info_page = 0, info_start = 0, show_items = 0;
-static char *message = NULL;
 static struct dir_t *curr, *selected;
 
 static struct dir_t **selected_array = NULL;
 static unsigned selected_size = 0;
-
-
-
 
 static void browse_draw_item(struct dir_t *n, int row) {
     char type, *size, dt;
@@ -27,8 +23,7 @@ static void browse_draw_item(struct dir_t *n, int row) {
 
     if (n == selected)
         attron(A_REVERSE);
-    if (n == curr->parent)
-    {
+    if (n == curr->parent) {
         mvaddstr(row, 17, "/..");
         if (n == selected)
             attroff(A_REVERSE);
@@ -51,34 +46,37 @@ static void browse_draw_item(struct dir_t *n, int row) {
 
 static void browse_draw(int index) {
     (void)index;
-    struct dir_t *t;
-    char *tmp;
     int i = 2;
+    unsigned col;
 
     erase();
-    t = curr;
 
     /* top line - basic info */
     attron(A_REVERSE);
     mvhline(0, 0, ' ', wincols);
-    mvhline(winrows-1, 0, ' ', wincols);
-    mvprintw(0,0,"%s %s ~ Use the arrow keys to navigate, press ? for help", PACKAGE_NAME, PACKAGE_VERSION);
-    // TODO: print flags like [read only] [root]
+    mvhline(winrows - 1, 0, ' ', wincols);
+    mvprintw(0, 0, "%s %s ~ Use the arrow keys to navigate, press ? for help", PACKAGE_NAME, PACKAGE_VERSION);
+    col = wincols + 1;
+    if (arc->flags & ARCHIVE_READ_ONLY)
+        mvaddstr(0, col -= 12, "[read only]");
+    if (geteuid() == 0)
+        mvaddstr(0, col -= 7,  "[root]");
     attroff(A_REVERSE);
 
     /* second line - the path */
     mvhline(1, 0, '-', wincols);
     mvaddch(1, 3, ' ');
-    tmp = filetree_getpath(curr);
+    char *tmp = filetree_getpath(curr);
     mvaddstr(1, 4, cropstr(tmp, wincols-8));
     mvaddch(1, 4+((int)strlen(tmp) > wincols-8 ? wincols-8 : (int)strlen(tmp)), ' ');
 
-    /* nothing to display? stop here. */
-    if(!t)
-        return;
+    /* bottom line - shortcuts */
+    attron(A_REVERSE);
+    mvaddstr(winrows - 1, 1, "(N)ew   (O)pen   (Q)uit   (D)elete   (T)est");
+    attroff(A_REVERSE);
 
     /* get start position */
-    t = curr->subs;
+    struct dir_t *t = curr->subs;
 
     if (curr->parent)
         browse_draw_item(curr->parent, i++);
@@ -91,11 +89,9 @@ static void browse_draw(int index) {
     /* move cursor to selected row for accessibility */
 }
 
-static int browse_key(int index, int ch)
-{
+static int browse_key(int index, int ch) {
     (void)index;
-    switch (ch)
-    {
+    switch (ch) {
         case KEY_UP:
             if (selected == curr->parent) break;
             if (selected->prev)
@@ -112,8 +108,7 @@ static int browse_key(int index, int ch)
         case '\n':
         case KEY_ENTER:
         case KEY_RIGHT:
-            if (selected->flags & NODE_ISDIR)
-            {
+            if (selected->flags & NODE_ISDIR) {
                 curr = selected;
                 selected = filetree_sort(curr->subs);
             }
@@ -122,13 +117,10 @@ static int browse_key(int index, int ch)
             if (selected != curr->parent)
             {
                 selected->flags ^= NODE_SELECTED;
-                if (selected->flags & NODE_SELECTED)
-                {
+                if (selected->flags & NODE_SELECTED) {
                     selected_array = realloc(selected_array, sizeof(struct dir_t *) * (++selected_size));
                     selected_array[selected_size - 1] = selected;
-                }
-                else
-                {
+                } else {
                     unsigned i = 0;
                     for (; selected_array[i] != selected; ++i);
                     for (++i; i < selected_size; ++i)
@@ -144,22 +136,69 @@ static int browse_key(int index, int ch)
             break;
         case 'o':
         case 'O':
-            if (selected_size > 0)
-            {
+            if (selected_size > 0) {
                 char **files = filetree_getArr(selected_array, selected_size);
                 actions_openFiles((const char *const *)files);
                 arrfree(files);
             }
             break;
-        case 'n':
-            if (selected_size > 0)
-            {
-                struct compression_options_t *options= compressdialog_init();
-                char **files = filetree_getArr(selected_array, selected_size);
-                arc->format->addFiles(arc, (const char *const *)files, options);
-                arrfree(files);
-                free(options);
+        case 'd':
+        case 'D':
+            if (!(arc->flags & ARCHIVE_READ_ONLY) && selected_size > 0) {
+                if (prompy_yesno("Delete files", "Are you sure you want to delete files?", 42)) {
+                    char **files = filetree_getArr(selected_array, selected_size);
+                    arc->format->deleteFiles(arc, (const char *const *)files);
+                    arrfree(files);
+                }
             }
+            break;
+        case 't':
+        case 'T':
+        {
+            if (arc->format->testFiles)
+                arc->format->testFiles(arc);
+        }
+            break;
+        case 'n':
+        {
+            struct compression_options_t *options = compressdialog_init();
+            if (!options)
+                break;
+            const char *files[1] = {NULL};
+            struct archive_t *newArc = NULL;
+            section_foreach_entry(format_array, const struct format_t *, iter)
+            {
+                const struct mime_type_t *ptr;
+                if ((*iter)->mime_types_rw)
+                    for(ptr = (*iter)->mime_types_rw; ptr->name; ++ptr)
+                        if (ptr == options->mime) {
+                            newArc = malloc((*iter)->objectSize);
+                            newArc->format = *iter;
+                            newArc->mime = options->mime->name;
+                            break;
+                        }
+                if (newArc)
+                    break;
+            }
+            char *path = (char *)malloc(2 + strlen(options->location) + strlen(options->filename));
+            strcpy(path, options->location);
+            strcat(path, "/");
+            strcat(path, options->filename);
+            newArc->format->openArchive(newArc, path);
+            free(path);
+            newArc->format->addFiles(newArc, files, options);
+            free(options);
+
+            if (prompy_yesno("Replace Archive", "Open new Archive ?", 24)) {
+                arc->format->closeArchive(arc);
+                arc = newArc;
+                newArc->dir = newArc->format->listFiles(newArc);
+                ui_remove();
+                browse_init(newArc->dir);
+            } else {
+                newArc->format->closeArchive(newArc);
+            }
+        }
             break;
         case 'i':
             nodeinfo_init(selected);
@@ -169,10 +208,8 @@ static int browse_key(int index, int ch)
 }
 
 
-void browse_init(struct dir_t *base)
-{
+void browse_init(struct dir_t *base) {
     ui_insert(browse_draw, browse_key, NULL);
-    message = NULL;
     curr = base;
     selected = filetree_sort(curr->subs);
 }
