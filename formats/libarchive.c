@@ -67,11 +67,10 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
             {"LRZ",  archive_write_add_filter_lrzip},
             {"LZ4",  archive_write_add_filter_lz4},
             {"TAR",  archive_write_add_filter_none},
-            {NULL, NULL}
         };
-        const struct data_t *iter;
+        const struct data_t *iter, *const end = extenFilter + (sizeof(extenFilter) / sizeof(extenFilter[0]));
         int len = strlen(archive->a.path);
-        for (iter = extenFilter; iter->extension != NULL; ++iter) {
+        for (iter = extenFilter; extenFilter != end; ++iter) {
             if (0 == strcasecmp(archive->a.path + len - strlen(iter->extension), iter->extension)) {
                 LOG_I("libarchive", "Detected %s compression for new file", iter->extension);
                 ret = iter->filter(archive->writer);
@@ -79,7 +78,7 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
                 break;
             }
         }
-        if (!iter->extension) {
+        if (extenFilter == end) {
             LOG_i("libarchive", "Falling back to gzip");
             ret = archive_write_add_filter_gzip(archive->writer);
         }
@@ -95,9 +94,80 @@ static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool ne
     }
 
     if (newFile && options) {
-        // TODO: Set compression level if passed in options.
+        if (options->compressionLevel != -1) {
+            char lev[] = "0";
+            lev[0] += options->compressionLevel;
+            ret = archive_write_set_filter_option(archive->writer, NULL, "compression-level", lev);
+            if (ret != ARCHIVE_OK) {
+                LOG_E("libarchive", "Failed to set compression level: %s", archive_error_string(archive->writer));
+                return false;
+            }
+        }
     }
 
+    if (archive_write_open_filename(archive->writer, archive->a.path) != ARCHIVE_OK) {
+        LOG_E("libarchive", "Could not open the archive for writing entries: %s", archive_error_string(archive->writer));
+        return false;
+    }
+
+    return true;
+}
+
+static bool _libarchive_writeAEntry(struct archive_libarchive_t *archive, struct archive_entry *entry) {
+    char buff[10240];
+    la_ssize_t readBytes;
+    switch (archive_write_header(archive->writer, entry)) {
+        case ARCHIVE_OK:
+            while ((readBytes = archive_read_data(archive->reader, buff, sizeof(buff))) > 0) {
+                archive_write_data(archive->writer, buff, readBytes);
+                if (archive_errno(archive->writer) != ARCHIVE_OK) {
+                    // TODO: print error https://github.com/KDE/ark/blob/master/plugins/libarchive/libarchiveplugin.cpp#L536
+                }
+            }
+            break;
+        case ARCHIVE_FAILED:
+        case ARCHIVE_FATAL:
+            return false;
+    }
+    return true;
+}
+
+static bool _libarchive_processOldEntries(struct archive_libarchive_t *archive, unsigned totalCount, char **files) {
+    (void)totalCount;
+    struct archive_entry *entry;
+    unsigned iteratedEntries = 0;
+    char **ptr;
+
+    while (archive_read_next_header(archive->reader, &entry) == ARCHIVE_OK) {
+        const char *entryPath = archive_entry_pathname(entry);
+        if (archive->a.op & (OP_MOVE | OP_COPY)) {
+            // TODO: https://github.com/KDE/ark/blob/master/plugins/libarchive/readwritelibarchiveplugin.cpp#L413
+        } else {
+            for (ptr = files; *ptr; ptr++)
+                if (0 == strcmp(entryPath, *ptr)) {
+                    archive_read_data_skip(archive->reader);
+                    switch (archive->a.op) {
+                        case OP_DELETE:
+                            // TODO: show progress
+                            break;
+                        case OP_ADD:
+                            LOG_D("libarchive", "File exists, skipping: %s", entryPath);
+                            break;
+                    }
+                    break;
+                }
+            if (ptr) {
+                *ptr = NULL;
+                continue;
+            }
+        }
+
+        if (_libarchive_writeAEntry(archive, entry)) {
+            if (archive->a.op == OP_DELETE)
+                iteratedEntries++;
+        }
+        // TODO: show progress
+    }
     return true;
 }
 
@@ -146,7 +216,7 @@ static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
     return root;
 }
 
-bool libarchive_deleteFiles(struct archive_t *_archive, const char *const *files)
+int libarchive_deleteFiles(struct archive_t *_archive, char **files)
 {
     struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
 
@@ -156,6 +226,8 @@ bool libarchive_deleteFiles(struct archive_t *_archive, const char *const *files
     if (!_libarchive_initWriter(archive, false, NULL))
         return false;
 
+    archive->a.op = OP_DELETE;
+    return _libarchive_processOldEntries(archive, 0, files);
     // TODO: continue work
     return false;
 }

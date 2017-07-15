@@ -2,6 +2,8 @@
 
 #include <stdarg.h>
 
+#include <unistd.h>
+
 size_t arrlen(const char *const *arr) {
     if (!arr) return 0;
     size_t size;
@@ -47,4 +49,9 @@ char **arrcatdup(char **arr, ...) {
     va_end(args);
 
     return res;
+}
+
+
+bool fileExists(const char *path) {
+    return (access(path, F_OK) == 0);
 }

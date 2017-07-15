@@ -46,20 +46,6 @@ static const char *_7z_fileExistsPatterns[] = {
     NULL};
 static const char *_7z_fileExistsFileName[] = {"^file \\./(.*)$", "^  Path:     \\./(.*)$", NULL};
 
-//static struct tm *mktime_from_string (char *str) // YY-MM-DD hh:mm:ss
-//{
-//    static struct tm tm = {0, };
-
-//    tm.tm_isdst = -1;
-
-//    sscanf(str, "%d-%d-%d %d:%d:%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday, &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
-
-//    tm.tm_year -= 1900;
-//    tm.tm_mon  -= 1;
-
-//    return &tm;
-//}
-
 static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FILE *outF)
 {
     (void)archive;
@@ -171,6 +157,37 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
     return root;
 }
 
+struct archive_cli_7z_t {
+    struct archive_t a;
+    struct compression_options_t *options;
+};
+
+static bool cli_7z_openArchive(struct archive_t *_archive, char *path)
+{
+    struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
+    archive->options = NULL;
+    return format_default_openArchive(&archive->a, path);
+}
+
+static bool cli_7z_closeArchive(struct archive_t *_archive)
+{
+    struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
+    free(archive->options);
+    return format_default_closeArchive(_archive);
+}
+
+bool cli_7z_addFiles(struct archive_t *_archive, const char *const *files, const struct compression_options_t *options)
+{
+    struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
+    if (!files || files[0] == NULL) {
+        free(archive->options);
+        archive->options = TYPE_MALLOC(struct compression_options_t);
+        memcpy(archive->options, options, sizeof(struct compression_options_t));
+        return ARCHIVE_ERROR_NO;
+    }
+    return cli_addFiles(_archive, files, options ?: archive->options);
+}
+
 static const struct mime_type_t _7z_mimes_rw[] = {
     {   MIME_TYPE_FULL_NAME("application/x-7z-compressed", "7z", "7-zip archive"),
         MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
@@ -187,17 +204,17 @@ static const struct mime_type_t _7z_mimes_rw[] = {
 static const struct cli_format_t cli_7z_proc = {
     .parent = {
         .name = "cli 7z",
-        .objectSize = sizeof(struct archive_t),
+        .objectSize = sizeof(struct archive_cli_7z_t),
         .mime_types_rw = _7z_mimes_rw,
         .flags = FORMAT_ENCRYPTION | FORMAT_ENCRYPTION_HEADERS,
 
-        .openArchive = format_default_openArchive,
+        .openArchive = cli_7z_openArchive,
         .listFiles = cli_listFiles,
         .extractFiles = cli_extractFiles,
         .deleteFiles = cli_deleteFiles,
         .testFiles = cli_testFiles,
-        .addFiles = cli_addFiles,
-        .closeArchive = format_default_closeArchive
+        .addFiles = cli_7z_addFiles,
+        .closeArchive = cli_7z_closeArchive
     },
     .cmds = _7z_cmds,
     .cmds_uses = _7z_cmds_uses,

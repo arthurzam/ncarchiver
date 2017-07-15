@@ -2,6 +2,7 @@
 #include "global_ui.h"
 #include "filetree.h"
 #include "functions.h"
+#include "listview.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -16,10 +17,7 @@
 
 struct fselect_t {
     char *path;
-    char **items;
-    unsigned items_count;
-    unsigned first_row;
-    int selected_row;
+    struct listview_data_t list;
     int flags;
 };
 
@@ -69,60 +67,32 @@ static char **getDirContent(const char *path, int flags) {
     return arr;
 }
 
-static unsigned MIN(unsigned a, unsigned b)
-{
-    return a<b?a:b;
-}
-
 static int fselect_key(int index, int key) {
     struct fselect_t *data = (struct fselect_t *)ui_data[index];
-    const unsigned maxItems = MIN(WIN_MAX_HEIGHT - 7, data->items_count);
     char *ptr;
     switch (key) {
         case KEY_HOME:
-            data->selected_row = 0;
-            data->first_row = 0;
-            break;
         case KEY_END:
-            if (maxItems == data->items_count) {
-                data->first_row = 0;
-                data->selected_row = data->items_count - 1;
-            } else {
-                data->selected_row = (int)(maxItems - 1);
-                data->first_row = data->items_count - (int)(maxItems) + 1;
-            }
-            break;
         case KEY_UP:
-            if (data->selected_row < 0)
-                break;
-            if (data->selected_row != 0)
-                --data->selected_row;
-            else if (data->first_row != 0)
-                    --data->first_row;
-            break;
         case KEY_DOWN:
-            if (data->selected_row < 0)
-                break;
-            if (data->selected_row + data->first_row == data->items_count - 1)
-                break;
-            if (data->selected_row < (int)(maxItems - 1))
-                ++data->selected_row;
-            else
-                ++data->first_row;
+        case KEY_PPAGE:
+        case KEY_NPAGE:
+            if (data->list.selected_row >= 0)
+                listview_key(&data->list, key);
             break;
         case '\t':
-            if (data->selected_row >= 0)
-                data->selected_row = -1;
-            else if (data->selected_row == -1)
-                data->selected_row = -2;
+            if (data->list.selected_row >= 0)
+                data->list.selected_row = -1;
+            else if (data->list.selected_row == -1)
+                data->list.selected_row = -2;
             else
-                data->selected_row = 0;
+                data->list.selected_row = 0;
             break;
         case '\n':
         case KEY_ENTER:
-            if (data->selected_row < 0)
+            if (data->list.selected_row < 0)
                 return 1;
-            ptr = data->items[data->first_row + data->selected_row];
+            ptr = data->list.items[data->list.first_row + data->list.selected_row];
             if (ptr[0] == '/') {
                 if (0 == strcmp(ptr, "/..")) {
                     if (data->path != (ptr = strrchr(data->path, '/')))
@@ -136,11 +106,7 @@ static int fselect_key(int index, int key) {
                     else
                         strcpy(data->path, ptr);
                 }
-                arrfree(data->items);
-                data->items = getDirContent(data->path, data->flags);
-                data->items_count = arrlen((const char *const *)data->items);
-                data->first_row = 0;
-                data->selected_row = 0;
+                listview_init(&data->list, getDirContent(data->path, data->flags), WIN_MAX_HEIGHT - 7, WIN_WIDTH, 0);
             }
             break;
     }
@@ -149,44 +115,41 @@ static int fselect_key(int index, int key) {
 
 static void fselect_draw(int index) {
     const struct fselect_t *data = (const struct fselect_t *)ui_data[index];
-    const unsigned height = MIN(WIN_MAX_HEIGHT, 7 + data->items_count);
-    int i;
 
-    nccreate(height, WIN_WIDTH, "Select File");
+    nccreate(data->list.height + 7, WIN_WIDTH, "Select File");
 
     attron(A_REVERSE);
     ncprint(2, 2, "%-*s", WIN_WIDTH - 4, data->path);
     attroff(A_REVERSE);
 
-    for (i = 0; i < (int)(height - 7); ++i) {
-        if (i == data->selected_row)
-            attron(A_REVERSE);
-        ncaddstr(4 + i, 2, cropstr(data->items[data->first_row + i], WIN_WIDTH - 5));
-        if (i == data->selected_row)
-            attroff(A_REVERSE);
-    }
+    subwinr += 4;
+    listview_draw(&data->list);
+    subwinr -= 4;
 
-    if (data->selected_row == -1)
+    if (data->list.selected_row == -1)
         attron(A_REVERSE);
-    ncaddstr(5 + i, WIN_WIDTH / 4 - 1, "OK");
-    if (data->selected_row == -1)
+    ncaddstr(5 + data->list.height, WIN_WIDTH / 4 - 3, "Select");
+    if (data->list.selected_row == -1)
         attroff(A_REVERSE);
-    else if (data->selected_row == -2)
+    else if (data->list.selected_row == -2)
         attron(A_REVERSE);
-    ncaddstr(5 + i, (3 * WIN_WIDTH / 4) - 3, "Cancel");
-    if (data->selected_row == -2)
+    ncaddstr(5 + data->list.height, (3 * WIN_WIDTH / 4) - 3, "Cancel");
+    if (data->list.selected_row == -2)
         attroff(A_REVERSE);
 }
 
 char *fselect_init(const char *path) {
-    char **content = getDirContent(path, 0);
-    struct fselect_t data = {
-        .path = strdup(path), .items = content, .first_row = 0, .selected_row = 0,
-        .flags = 0, .items_count = arrlen((const char *const *)content)
-    };
+    struct fselect_t data;
+    data.path = strdup(path);
+    data.flags = 0;
+    data.list.items = NULL;
+    listview_init(&data.list, getDirContent(path, data.flags), WIN_MAX_HEIGHT - 7, WIN_WIDTH, 0);
+
     ui_insert(fselect_draw, fselect_key, &data);
     while (input_handle(0) != 1);
     ui_remove();
-    arrfree(data.items);
+
+    arrfree(data.list.items);
+
     return data.path;
 }

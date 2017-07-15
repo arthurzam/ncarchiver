@@ -35,7 +35,6 @@ static int nodeinfo_key(int index, int ch) {
 }
 
 static void nodeinfo_draw(int index) {
-
     struct dir_t *node = (struct dir_t *)ui_data[index];
     const char *path = filetree_getpath(node);
     unsigned moreCount = 0, i;
@@ -58,7 +57,7 @@ static void nodeinfo_draw(int index) {
             ncprint(row++, 2, "%s: %s", node->moreInfo[i].key, node->moreInfo[i].value);
     row++;
 
-    ncaddstr(row, 2, "(Q)uit   (D)elete   (O)pen");
+    ncaddstr(row, 2, "(Q)uit   (O)pen   (D)elete");
 }
 
 void nodeinfo_init(struct dir_t *node) {

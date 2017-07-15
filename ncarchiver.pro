@@ -29,7 +29,8 @@ HEADERS += \
     formats/filetree.h \
     formats/cli.h \
     formats/logging.h \
-    formats/functions.h
+    formats/functions.h \
+    ui/listview.h
 
 SOURCES += \
     xdgmime/xdgmime.c \
@@ -51,9 +52,11 @@ SOURCES += \
     ui/fselect.c \
     ui/prompt_list.c \
     \
-    formats/libarchive.c \
-    formats/filetree.c \
-    formats/cli.c \
     formats/global.c \
+    formats/filetree.c \
+    formats/functions.c \
+    formats/cli.c \
+    formats/libarchive.c \
     formats/cli_7z.c \
-    formats/functions.c
+    formats/cli_zip.c \
+    ui/listview.c

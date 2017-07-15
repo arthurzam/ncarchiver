@@ -302,8 +302,16 @@ struct compression_options_t *compressdialog_init() {
     data->options.encryptionMethod = mime->encryptionMethodDefault;
     data->size = _compressdialog_mimeSize(mime);
     data->options.mime = mime;
+
     ui_insert(compressdialog_draw, compressdialog_key, data);
     while (input_handle(0) != 1);
     ui_remove();
+
+    if (data->selected_row == ROW_CANCEL)
+    {
+        free(data);
+        return NULL;
+    }
+
     return &data->options;
 }

@@ -60,7 +60,7 @@ bool start_subprocess(int *pid, int *infd, int *outfd, const char *cmd, char **a
 int cli_processLineErrors(struct archive_t *archive, const char *line, FILE *inF, int *flags);
 struct dir_t *cli_listFiles(struct archive_t *archive);
 bool cli_extractFiles(struct archive_t *archive, const char *const *files, const char *destinationFolder);
-bool cli_deleteFiles(struct archive_t *archive, const char *const *files);
+int cli_deleteFiles(struct archive_t *archive, char **files);
 bool cli_testFiles(struct archive_t *archive);
 bool cli_addFiles(struct archive_t *archive, const char *const *files, const struct compression_options_t *options);
 

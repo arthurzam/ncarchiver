@@ -147,7 +147,7 @@ static int browse_key(int index, int ch) {
             if (!(arc->flags & ARCHIVE_READ_ONLY) && selected_size > 0) {
                 if (prompy_yesno("Delete files", "Are you sure you want to delete files?", 42)) {
                     char **files = filetree_getArr(selected_array, selected_size);
-                    arc->format->deleteFiles(arc, (const char *const *)files);
+                    arc->format->deleteFiles(arc, files);
                     arrfree(files);
                 }
             }
@@ -166,8 +166,7 @@ static int browse_key(int index, int ch) {
                 break;
             const char *files[1] = {NULL};
             struct archive_t *newArc = NULL;
-            section_foreach_entry(format_array, const struct format_t *, iter)
-            {
+            section_foreach_entry(format_array, const struct format_t *, iter) {
                 const struct mime_type_t *ptr;
                 if ((*iter)->mime_types_rw)
                     for(ptr = (*iter)->mime_types_rw; ptr->name; ++ptr)
@@ -211,6 +210,7 @@ static int browse_key(int index, int ch) {
 void browse_init(struct dir_t *base) {
     ui_insert(browse_draw, browse_key, NULL);
     curr = base;
-    selected = filetree_sort(curr->subs);
+    if (curr->subs)
+        selected = filetree_sort(curr->subs);
 }
 

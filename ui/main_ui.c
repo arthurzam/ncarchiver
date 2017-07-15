@@ -163,9 +163,10 @@ static const struct format_t *findFormat(const char *mime)
 
 FILE* loggerFile;
 
-#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
+//#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
+#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/bb.7z"
 //#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
-//#define DEFAULT_PATH "/home/arthur/dev/firefox-QMPlay2.tar.gz"
+//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/firefox-QMPlay2.tar.gz"
 
 #include <magic.h>
 

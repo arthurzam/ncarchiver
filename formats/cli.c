@@ -284,7 +284,7 @@ bool cli_extractFiles(struct archive_t *archive, const char *const *files, const
     return res == ARCHIVE_ERROR_NO;
 }
 
-bool cli_deleteFiles(struct archive_t *archive, const char *const *files)
+int cli_deleteFiles(struct archive_t *archive, char **files)
 {
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_DELETE), NULL };

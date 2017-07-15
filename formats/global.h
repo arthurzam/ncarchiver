@@ -51,8 +51,9 @@ enum ArchiveOperation {
     OP_DELETE   = 0x4,
     OP_RENAME   = 0x8,
     OP_EXTRACT  = 0x10,
-    OP_COMPRESS = 0x20,
-    OP_TEST     = 0x40,
+    OP_TEST     = 0x20,
+    OP_COPY     = 0x40,
+    OP_MOVE     = 0x80
 };
 
 enum ArchiveError {
@@ -109,7 +110,7 @@ struct format_t {
 
     struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
     bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__));
-    bool (*deleteFiles)(struct archive_t *archive, const char *const *files) __attribute__ ((__nonnull__));
+    int (*deleteFiles)(struct archive_t *archive, char **files) __attribute__ ((__nonnull__));
     bool (*testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
     bool (*addFiles)(struct archive_t *archive, const char *const *files, const struct compression_options_t *options) __attribute__ ((__nonnull__));
 
@@ -146,4 +147,5 @@ bool format_default_closeArchive(struct archive_t *archive);
 
 #define TYPE_MALLOC(type) (type *)malloc(sizeof(type))
 #define STRING_ARR(...) (const char *[]){__VA_ARGS__, NULL}
+
 #endif // GLOBAL_H

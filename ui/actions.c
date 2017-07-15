@@ -12,9 +12,9 @@ bool actions_openFiles(const char *const *files)
 {
     const char *const *ptr;
     bool res = true;
-    int pid, status, n;
+    int pid, status;
     char fullPath[FILENAME_MAX];
-    char *argv[] = {"sh", "-c", "xdg-open", fullPath, NULL};
+    char *argv[] = {getCmdPath("sh"), getCmdPath("xdg-open"), fullPath, NULL};
 
     char dTemplate[] = "/tmp/.-ncark-XXXXXX"; // len = 19
     mkdtemp(dTemplate);
@@ -24,22 +24,17 @@ bool actions_openFiles(const char *const *files)
     fullPath[19] = '/';
     fullPath[20] = '\0';
 
+    def_prog_mode();
+    endwin();
+
     for (ptr = files; res && *ptr != NULL; ++ptr) {
         strcpy(fullPath + 20, *ptr);
         switch (pid = fork()) {
             case -1:
-                return false;
+                res = false;
+                break;
             case 0:
-                setsid();
-                close(0);
-                close(1);
-                close(2);
-                n = open("/dev/null", O_RDWR);
-                dup2(n, STDIN_FILENO);
-                dup2(n, STDOUT_FILENO);
-                dup2(n, STDERR_FILENO);
-                close(n);
-                execvp("/bin/sh", argv);
+                execv(argv[0], argv);
                 exit(0);
                 break;
             default:
@@ -47,5 +42,8 @@ bool actions_openFiles(const char *const *files)
                 res = res && (0 == status);
         }
     }
+    free(argv[0]);
+    free(argv[1]);
+    refresh();
     return res;
 }
