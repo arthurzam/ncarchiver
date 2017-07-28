@@ -100,19 +100,19 @@ struct compression_options_t
 };
 
 struct format_t {
-    const char *name;
-    const struct mime_type_t *mime_types_rw;
-    const char *const *mime_types_ro;
+    const char *const name;
+    const struct mime_type_t *const mime_types_rw;
+    const char *const *const mime_types_ro;
 
-    bool (*openArchive)(struct archive_t *archive, char *path) __attribute__ ((__nonnull__));
-    bool (*closeArchive)(struct archive_t *archive) __attribute__ ((__nonnull__));
-    bool (*setPassword)(struct archive_t *archive, const char *password) __attribute__ ((__nonnull__(1)));
+    bool (*const openArchive)(struct archive_t *archive, char *path) __attribute__ ((__nonnull__));
+    bool (*const closeArchive)(struct archive_t *archive) __attribute__ ((__nonnull__));
+    bool (*const setPassword)(struct archive_t *archive, const char *password) __attribute__ ((__nonnull__(1)));
 
-    struct dir_t *(*listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
-    bool (*extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__));
-    int (*deleteFiles)(struct archive_t *archive, char **files) __attribute__ ((__nonnull__));
-    bool (*testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
-    bool (*addFiles)(struct archive_t *archive, const char *const *files, const struct compression_options_t *options) __attribute__ ((__nonnull__));
+    struct dir_t *(*const listFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
+    bool (*const extractFiles)(struct archive_t *archive, const char *const *files, const char *destinationFolder) __attribute__ ((__nonnull__));
+    int (*const deleteFiles)(struct archive_t *archive, char **files) __attribute__ ((__nonnull__));
+    bool (*const testFiles)(struct archive_t *archive) __attribute__ ((__nonnull__));
+    bool (*const addFiles)(struct archive_t *archive, const char *const *files, const struct compression_options_t *options) __attribute__ ((__nonnull__));
 
     size_t objectSize;
     uint8_t flags;

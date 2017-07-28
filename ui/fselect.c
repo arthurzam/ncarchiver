@@ -88,7 +88,7 @@ static int fselect_key(int index, int key) {
             else
                 data->list.selected_row = 0;
             break;
-        case '\n':
+        case KEY_RETURN:
         case KEY_ENTER:
             if (data->list.selected_row < 0)
                 return 1;

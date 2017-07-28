@@ -90,7 +90,7 @@ static int compressdialog_key(int index, int key) {
     struct compressdialog_t *data = (struct compressdialog_t *)ui_data[index];
     const struct mime_type_t *mime = types.mimes[data->selected_type];
     switch (key) {
-        case '\t':
+        case KEY_TAB:
         case KEY_DOWN:
             ++data->selected_row;
             if (data->selected_row == ROW_COMPR_METHOD && mime->compressionMethods == NULL)
@@ -119,7 +119,7 @@ static int compressdialog_key(int index, int key) {
         case KEY_END:
             data->selected_row = ROW_OK;
             return compressdialog_key(index, KEY_UP);
-        case 10: // Enter
+        case KEY_RETURN:
         case KEY_ENTER:
             if (data->selected_row <= ROW_CANCEL)
                 return 1;
@@ -149,7 +149,7 @@ static int compressdialog_key(int index, int key) {
             else if (data->selected_row == ROW_ENCR_HDR)
                 data->options.encryptHeaders = !data->options.encryptHeaders;
             return 0;
-        case ' ':
+        case KEY_SPACE:
             if (data->selected_row == ROW_ENCR_HDR)
             {
                 data->options.encryptHeaders = !data->options.encryptHeaders;
@@ -180,7 +180,7 @@ static int compressdialog_key(int index, int key) {
     if (!selectedTB)
         return 0;
     size_t i;
-    if (key == KEY_BACKSPACE || key == 0x7f)
+    if (key == KEY_BACKSPACE || key == KEY_DELETE)
     {
         i = *selectedTB ? strlen(*selectedTB) : 0;
         if (i > 0)
@@ -223,15 +223,6 @@ static void _compressdialog_draw_textbox(int row, int col, const char *text, boo
     attroff(A_UNDERLINE);
 }
 
-static void _compressdialog_draw_label(int row, int col, const char *text, bool flag)
-{
-    if (flag)
-        attron(A_REVERSE);
-    ncaddstr(row, col, text);
-    if (flag)
-        attroff(A_REVERSE);
-}
-
 static void compressdialog_draw(int index) {
     struct compressdialog_t *data = (struct compressdialog_t *)ui_data[index];
     const struct mime_type_t *mime = types.mimes[data->selected_type];
@@ -239,11 +230,11 @@ static void compressdialog_draw(int index) {
 
     nccreate(data->size, WINDOW_WIDTH, "Create New Archive");
 
-    _compressdialog_draw_label  (row, 2, "Location:", data->selected_row == ROW_LOCATION);
+    draw_label                  (row, 2, "Location:", data->selected_row == ROW_LOCATION);
     _compressdialog_draw_textbox(row++, 12, data->options.location, false);
-    _compressdialog_draw_label  (row, 2, "Filename:", data->selected_row == ROW_FILENAME);
+    draw_label                  (row, 2, "Filename:", data->selected_row == ROW_FILENAME);
     _compressdialog_draw_textbox(row++, 12, data->options.filename, false);
-    _compressdialog_draw_label  (row, 2, "Format:"  , data->selected_row == ROW_TYPE);
+    draw_label                  (row, 2, "Format:"  , data->selected_row == ROW_TYPE);
     attron(A_UNDERLINE);
     ncprint                     (row++, 12, "%s (*.%s)", mime->prettyText, mime->extension);
     attroff(A_UNDERLINE);
@@ -255,13 +246,13 @@ static void compressdialog_draw(int index) {
         ncaddstr(row++, 2, "Compression");
         if (mime->compressionMethods)
         {
-            _compressdialog_draw_label(row, 4, "Method:", data->selected_row == ROW_COMPR_METHOD);
-            ncaddstr                  (row++, 14, mime->compressionMethods[data->options.compressionMethod]);
+            draw_label(row, 4, "Method:", data->selected_row == ROW_COMPR_METHOD);
+            ncaddstr  (row++, 14, mime->compressionMethods[data->options.compressionMethod]);
         }
         if (mime->compressionLevelMin != -1 || mime->compressionLevelMax != -1)
         {
-            _compressdialog_draw_label(row, 4, "Level:", data->selected_row == ROW_COMPR_LEVEL);
-            ncprint(row++, 14, "%d [%-*s%c%-*s] %d",
+            draw_label(row, 4, "Level:", data->selected_row == ROW_COMPR_LEVEL);
+            ncprint   (row++, 14, "%d [%-*s%c%-*s] %d",
                         mime->compressionLevelMin, data->options.compressionLevel - mime->compressionLevelMin, "",
                         '0' + data->options.compressionLevel,
                         mime->compressionLevelMax - data->options.compressionLevel, "", mime->compressionLevelMax);
@@ -272,10 +263,10 @@ static void compressdialog_draw(int index) {
     {
         row++;
         ncaddstr(row++, 2, "Encryption");
-        _compressdialog_draw_label(row, 4, "Method:", data->selected_row == ROW_ENCR_METHOD);
-        ncaddstr                  (row++, 14, mime->encryptionMethods[data->options.encryptionMethod]);
+        draw_label(row, 4, "Method:", data->selected_row == ROW_ENCR_METHOD);
+        ncaddstr  (row++, 14, mime->encryptionMethods[data->options.encryptionMethod]);
 
-        _compressdialog_draw_label  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
+        draw_label                  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
         _compressdialog_draw_textbox(row++, 14, data->options.password, true);
 
         if (data->selected_row == ROW_ENCR_HDR)
@@ -287,8 +278,8 @@ static void compressdialog_draw(int index) {
 
 
     row++;
-    _compressdialog_draw_label(row, WINDOW_WIDTH / 4 - 1,       "OK"    , data->selected_row == ROW_OK);
-    _compressdialog_draw_label(row, (3 * WINDOW_WIDTH / 4) - 3, "Cancel", data->selected_row == ROW_CANCEL);
+    draw_label(row, WINDOW_WIDTH / 4 - 1,       "OK"    , data->selected_row == ROW_OK);
+    draw_label(row, (3 * WINDOW_WIDTH / 4) - 3, "Cancel", data->selected_row == ROW_CANCEL);
 }
 
 struct compression_options_t *compressdialog_init() {

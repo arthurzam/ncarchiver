@@ -24,13 +24,14 @@ HEADERS += \
     ui/util.h \
     ui/prompt.h \
     ui/actions.h \
+    ui/listview.h \
+    ui/keys.h \
     \
     formats/global.h \
     formats/filetree.h \
     formats/cli.h \
     formats/logging.h \
-    formats/functions.h \
-    ui/listview.h
+    formats/functions.h
 
 SOURCES += \
     xdgmime/xdgmime.c \
@@ -51,6 +52,8 @@ SOURCES += \
     ui/compressdialog.c \
     ui/fselect.c \
     ui/prompt_list.c \
+    ui/listview.c \
+    ui/extractdialog.c \
     \
     formats/global.c \
     formats/filetree.c \
@@ -58,5 +61,4 @@ SOURCES += \
     formats/cli.c \
     formats/libarchive.c \
     formats/cli_7z.c \
-    formats/cli_zip.c \
-    ui/listview.c
+    formats/cli_zip.c

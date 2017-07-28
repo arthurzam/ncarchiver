@@ -13,8 +13,7 @@ struct archive_libarchive_t {
     struct archive *reader, *writer;
 };
 
-static bool _libarchive_initReader(struct archive_libarchive_t *archive)
-{
+static bool _libarchive_initReader(struct archive_libarchive_t *archive) {
     if (archive->reader)
         archive_read_free(archive->reader);
     archive->reader = archive_read_new();
@@ -38,8 +37,7 @@ static bool _libarchive_initReader(struct archive_libarchive_t *archive)
     return true;
 }
 
-static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool newFile, struct compression_options_t *options)
-{
+static bool _libarchive_initWriter(struct archive_libarchive_t *archive, bool newFile, struct compression_options_t *options) {
     if (archive->writer)
         archive_write_free(archive->writer);
     archive->writer = archive_write_new();
@@ -156,7 +154,7 @@ static bool _libarchive_processOldEntries(struct archive_libarchive_t *archive, 
                     }
                     break;
                 }
-            if (ptr) {
+            if (*ptr) {
                 *ptr = NULL;
                 continue;
             }
@@ -171,8 +169,7 @@ static bool _libarchive_processOldEntries(struct archive_libarchive_t *archive, 
     return true;
 }
 
-static bool libarchive_openArchive(struct archive_t *_archive, char *path)
-{
+static bool libarchive_openArchive(struct archive_t *_archive, char *path) {
     struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
 
     archive->reader = archive_read_disk_new();
@@ -216,8 +213,7 @@ static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
     return root;
 }
 
-int libarchive_deleteFiles(struct archive_t *_archive, char **files)
-{
+int libarchive_deleteFiles(struct archive_t *_archive, char **files) {
     struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
 
     if (!_libarchive_initReader(archive))

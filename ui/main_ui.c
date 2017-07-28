@@ -44,12 +44,10 @@ int input_handle(int wait)
 
     if (wait != 1)
         screen_draw();
-    else
-    {
+    else {
         gettimeofday(&tv, (void *)NULL);
         tv.tv_usec = (1000 * (tv.tv_sec % 1000) + (tv.tv_usec / 1000)) / update_delay;
-        if (lastupdate != tv.tv_usec)
-        {
+        if (lastupdate != tv.tv_usec) {
             screen_draw();
             lastupdate = tv.tv_usec;
         }
@@ -60,10 +58,8 @@ int input_handle(int wait)
         return !wait;
 
     nodelay(stdscr, !!wait);
-    while ((ch = getch()) != ERR)
-    {
-        if (ch == KEY_RESIZE)
-        {
+    while ((ch = getch()) != ERR) {
+        if (ch == KEY_RESIZE) {
             if(ncresize(min_rows, min_cols))
                 min_rows = min_cols = 0;
             /* ncresize() may change nodelay state, make sure to revert it. */
@@ -91,11 +87,9 @@ static void init_nc()
         return;
     ncurses_init = 1;
 
-    if(ncurses_tty)
-    {
+    if(ncurses_tty) {
         tty = fopen("/dev/tty", "r+");
-        if(!tty)
-        {
+        if(!tty) {
             fprintf(stderr, "Error opening /dev/tty: %s\n", strerror(errno));
             exit(1);
         }
@@ -103,14 +97,11 @@ static void init_nc()
         if(term)
             set_term(term);
         ok = !!term;
-    }
-    else
-    {
+    } else {
         /* Make sure the user doesn't accidentally pipe in data to ncdu's standard
          * input without using "-f -". An annoying input sequence could result in
          * the deletion of your files, which we want to prevent at all costs. */
-        if(!isatty(0))
-        {
+        if(!isatty(0)) {
             fprintf(stderr, "Standard input is not a TTY. Did you mean to import a file using '-f -'?\n");
             exit(1);
         }
@@ -134,25 +125,21 @@ struct archive_t *arc;
 
 static const struct format_t *findFormat(const char *mime)
 {
-    section_foreach_entry(format_array, const struct format_t *, iter)
-    {
+    section_foreach_entry(format_array, const struct format_t *, iter) {
         const struct mime_type_t *ptr;
         if ((*iter)->mime_types_rw)
             for(ptr = (*iter)->mime_types_rw; ptr->name; ++ptr)
-                if (0 == strcmp(ptr->name, mime))
-                {
+                if (0 == strcmp(ptr->name, mime)) {
                     arc = malloc((*iter)->objectSize);
                     arc->flags = 0;
                     return *iter;
                 }
     }
-    section_foreach_entry(format_array, const struct format_t *, iter)
-    {
+    section_foreach_entry(format_array, const struct format_t *, iter) {
         const char *const *ptr;
         if ((*iter)->mime_types_ro)
             for(ptr = (*iter)->mime_types_ro; *ptr; ++ptr)
-                if (0 == strcmp(*ptr, mime))
-                {
+                if (0 == strcmp(*ptr, mime)) {
                     arc = malloc((*iter)->objectSize);
                     arc->flags |= ARCHIVE_READ_ONLY;
                     return *iter;
@@ -164,8 +151,8 @@ static const struct format_t *findFormat(const char *mime)
 FILE* loggerFile;
 
 //#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
-#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/bb.7z"
-//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
+//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/bb.7z"
+#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
 //#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/firefox-QMPlay2.tar.gz"
 
 #include <magic.h>
@@ -201,14 +188,11 @@ int main(int argc, char **argv)
     arc->format = format;
     format->openArchive(arc, path);
     arc->dir = format->listFiles(arc);
-    if(!arc->dir)
-    {
-        switch (arc->error)
-        {
+    if(!arc->dir) {
+        switch (arc->error) {
             case ARCHIVE_ERROR_BAD_PASSWORD:
                 arc->password = prompt_text("Password", "Enter password:");
-                if (!(arc->dir = format->listFiles(arc)))
-                {
+                if (!(arc->dir = format->listFiles(arc))) {
                     fprintf(stderr, "Bad Password\n");
                     goto _exit;
                 }
@@ -220,8 +204,7 @@ int main(int argc, char **argv)
     while (input_handle(0) != 1);
 
 _exit:
-    if(ncurses_init)
-    {
+    if(ncurses_init) {
         erase();
         refresh();
         endwin();

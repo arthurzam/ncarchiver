@@ -27,31 +27,31 @@ struct pMimeStr {
 struct cli_format_t {
     struct format_t parent;
 
-    const char *const *cmds;
-    const uint8_t *cmds_uses;
+    const char *const *const cmds;
+    const uint8_t *const cmds_uses;
 
-    const char **addSwitch;
-    const char **extractSwitch;
-    const char **delSwitch;
-    const char **listSwitch;
-    const char **testSwitch;
+    const char **const addSwitch;
+    const char **const extractSwitch;
+    const char **const delSwitch;
+    const char **const listSwitch;
+    const char **const testSwitch;
 
-    const char **passwordSwitch;
-    const char **passwordHeadersSwitch;
+    const char **const passwordSwitch;
+    const char **const passwordHeadersSwitch;
 
-    const struct pMimeStr* compressionLevelSwitch;
-    const struct pMimeStr* compressionMethodSwitch;
-    const struct pMimeStr* encryptionMethodSwitch;
+    const struct pMimeStr *const compressionLevelSwitch;
+    const struct pMimeStr *const compressionMethodSwitch;
+    const struct pMimeStr *const encryptionMethodSwitch;
 
-    const char *const *errorWrongPassword;
-    const char *const *errorCorruptedArchive;
-    const char *const *errorFullDisk;
-    const char *const *fileExistsPatterns;
-    const char *const *fileExistsFileName;
-    const char *fileExistsInput[5];
+    const char *const *const errorWrongPassword;
+    const char *const *const errorCorruptedArchive;
+    const char *const *const errorFullDisk;
+    const char *const *const fileExistsPatterns;
+    const char *const *const fileExistsFileName;
+    const char *const fileExistsInput[5];
 
-    struct dir_t *(*processList)(struct archive_t *archive, FILE *inF, FILE *outF) __attribute__ ((__nonnull__ (1,2,3)));
-    int (*processLine)(struct archive_t *archive, const char *line, FILE *inF, int *flags) __attribute__ ((__nonnull__ (1,2,3,4)));
+    struct dir_t *(*const processList)(struct archive_t *archive, FILE *inF, FILE *outF) __attribute__ ((__nonnull__ (1,2,3)));
+    int (*const processLine)(struct archive_t *archive, const char *line, FILE *inF, int *flags) __attribute__ ((__nonnull__ (1,2,3,4)));
 };
 
 char *getCmdPath(const char *cmd) __attribute__((malloc)) __attribute__ ((__nonnull__ (1)));
@@ -64,6 +64,5 @@ int cli_deleteFiles(struct archive_t *archive, char **files);
 bool cli_testFiles(struct archive_t *archive);
 bool cli_addFiles(struct archive_t *archive, const char *const *files, const struct compression_options_t *options);
 
-#define strstartswith(str, prefix) (strncmp(prefix, str, strlen(prefix)) == 0)
 
 #endif // EXTERNAL_PROC_H

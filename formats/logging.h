@@ -18,6 +18,13 @@ extern FILE* loggerFile;
 #define LOG_D(prefix, format, ...) LOG4("debug", prefix, format, __VA_ARGS__)
 #define LOG_I(prefix, format, ...) LOG4("info", prefix, format, __VA_ARGS__)
 
+void _nc_abort(const char *file, int line, const char *msg) __attribute__ ((__noreturn__));
+
+#define NC_ASSERT(expr,msg) while(!(expr)) {_nc_abort(__FILE__, __LINE__, msg); }
+#define NC_ASSERT_VAL(expr,val) NC_ASSERT((expr) == (val), #expr " != " #val)
+#define NC_ASSERT_RANGE(expr,min,max) NC_ASSERT((expr) >= (min) && (expr) <= (max), #expr " not in range [" #min " , " #max "]")
+#define NC_ASSERT_NONNULL(expr) NC_ASSERT((expr) != NULL, #expr " is NULL")
+
 #else
 
 #define LOG3(type, prefix, format)

@@ -1,3 +1,4 @@
+#include "functions.h"
 #include "global.h"
 #include "cli.h"
 #include "filetree.h"
@@ -80,9 +81,7 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 }
                 break;
             case 1: // parse header
-                if (strstartswith(line, "Listing archive:"))
-                    LOG_I("7z", "listing archive: %s", line + 16);
-                else if (0 == strcmp(line, "--") || 0 == strcmp(line, "----"))
+                if (0 == strcmp(line, "--") || 0 == strcmp(line, "----"))
                     state = 2;
                 else if (strstartswith(line, "Enter password (will not be echoed)")) {
                     archive->flags |= ARCHIVE_ENCRYPTED;
@@ -92,15 +91,12 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 } else if (NULL != strstr(line, "Error: ")) {
                     LOG_E("7z", "error parsing header: %s", line + 7);
                     return NULL;
-                }
+                } else if (strstartswith(line, "Listing archive:"))
+                    LOG_I("7z", "listing archive: %s", line + 16);
                 break;
             case 2: // parse archive information
                 if (0 == strcmp(line, "----------"))
                     state = 4;
-                else if (strstartswith(line, "Type = "))
-                    LOG_I("7z", "type: %s", line + 7);
-                else if (strstartswith(line, "Method = "))
-                    LOG_I("7z", "method: %s", line + 9);
                 else if (strstartswith(line, "Comment = ")) {
                     arr_len = strlen(line + 10);
                     archive->comment = (char *)malloc(arr_size = arr_len + arr_len / 2);
@@ -108,7 +104,10 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     archive->comment[arr_len] = '\n';
                     archive->comment[++arr_len] = '\0';
                     state = 3;
-                }
+                } else if (strstartswith(line, "Type = "))
+                    LOG_I("7z", "type: %s", line + 7);
+                else if (strstartswith(line, "Method = "))
+                    LOG_I("7z", "method: %s", line + 9);
                 break;
             case 3: // parse comment
                 if (0 == strcmp(line, "----------"))
@@ -162,22 +161,19 @@ struct archive_cli_7z_t {
     struct compression_options_t *options;
 };
 
-static bool cli_7z_openArchive(struct archive_t *_archive, char *path)
-{
+static bool cli_7z_openArchive(struct archive_t *_archive, char *path) {
     struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
     archive->options = NULL;
     return format_default_openArchive(&archive->a, path);
 }
 
-static bool cli_7z_closeArchive(struct archive_t *_archive)
-{
+static bool cli_7z_closeArchive(struct archive_t *_archive) {
     struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
     free(archive->options);
     return format_default_closeArchive(_archive);
 }
 
-bool cli_7z_addFiles(struct archive_t *_archive, const char *const *files, const struct compression_options_t *options)
-{
+bool cli_7z_addFiles(struct archive_t *_archive, const char *const *files, const struct compression_options_t *options) {
     struct archive_cli_7z_t *archive = (struct archive_cli_7z_t *)_archive;
     if (!files || files[0] == NULL) {
         free(archive->options);

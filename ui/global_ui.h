@@ -7,8 +7,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-# include <inttypes.h>
-# include <stdint.h>
+#include <inttypes.h>
+#include <stdint.h>
+
+#include "keys.h"
 
 #define PACKAGE_NAME "ncarchiver"
 #define PACKAGE_VERSION "0.0"
@@ -30,7 +32,11 @@ int input_handle(int);
 void browse_init(struct dir_t *base);
 void nodeinfo_init(struct dir_t *node);
 struct compression_options_t *compressdialog_init();
+void extractdialog_init(struct dir_t **files, unsigned files_size);
 char *fselect_init(const char *path);
 unsigned prompt_list_init(const char *title, const char *const *items, unsigned defaultItem);
+
+/* widgets */
+void draw_label(int row, int col, const char *text, bool flag);
 
 #endif // GLOBAL_UI_H

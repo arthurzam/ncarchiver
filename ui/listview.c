@@ -71,8 +71,7 @@ void listview_key(struct listview_data_t *data, int key) {
 }
 
 void listview_draw(const struct listview_data_t *data) {
-    int i;
-    for (i = 0; i < (int)data->height; ++i) {
+    for (int i = 0; i < (int)data->height; ++i) {
         if (i == data->selected_row)
             attron(A_REVERSE);
         ncaddstr(i, 2, cropstr(data->items[data->first_row + i], data->width - 5));

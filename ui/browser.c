@@ -113,7 +113,7 @@ static int browse_key(int index, int ch) {
                 selected = filetree_sort(curr->subs);
             }
             break;
-        case ' ':
+        case KEY_SPACE:
             if (selected != curr->parent)
             {
                 selected->flags ^= NODE_SELECTED;
@@ -131,7 +131,7 @@ static int browse_key(int index, int ch) {
             break;
         case 'q':
         case 'Q':
-            if (prompy_yesno("Confirm Quit", "Really quit? (y/N)", 30))
+            if (prompt_yesno("Confirm Quit", "Really quit? (y/N)", 30))
                 return 1;
             break;
         case 'o':
@@ -145,7 +145,7 @@ static int browse_key(int index, int ch) {
         case 'd':
         case 'D':
             if (!(arc->flags & ARCHIVE_READ_ONLY) && selected_size > 0) {
-                if (prompy_yesno("Delete files", "Are you sure you want to delete files?", 42)) {
+                if (prompt_yesno("Delete files", "Are you sure you want to delete files?", 42)) {
                     char **files = filetree_getArr(selected_array, selected_size);
                     arc->format->deleteFiles(arc, files);
                     arrfree(files);
@@ -188,7 +188,7 @@ static int browse_key(int index, int ch) {
             newArc->format->addFiles(newArc, files, options);
             free(options);
 
-            if (prompy_yesno("Replace Archive", "Open new Archive ?", 24)) {
+            if (prompt_yesno("Replace Archive", "Open new Archive ?", 24)) {
                 arc->format->closeArchive(arc);
                 arc = newArc;
                 newArc->dir = newArc->format->listFiles(newArc);
@@ -202,6 +202,10 @@ static int browse_key(int index, int ch) {
         case 'i':
             nodeinfo_init(selected);
             break;
+        case 'e':
+            extractdialog_init(selected_array, selected_size);
+            break;
+
     }
     return 0;
 }

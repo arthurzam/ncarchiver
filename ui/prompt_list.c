@@ -22,11 +22,11 @@ struct prompt_list_t {
 static int prompt_list_key(int index, int key) {
     struct prompt_list_t *data = (struct prompt_list_t *)ui_data[index];
     switch(key) {
-        case 9: // TAB
+        case KEY_TAB:
             data->selected_btn = 1 - data->selected_btn;
             break;
-        case 10: // Enter
         case KEY_ENTER:
+        case KEY_RETURN:
             return 1;
         case KEY_HOME:
         case KEY_END:

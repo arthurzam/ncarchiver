@@ -23,15 +23,15 @@ static int prompt_key(int index, int key) {
     struct prompt_t *data = (struct prompt_t *)ui_data[index];
     size_t i;
     switch(key) {
-        case 9: // TAB
+        case KEY_TAB:
             if (data->buttons[++data->selected_button] == NULL)
                 data->selected_button = 0;
             return 0;
-        case 10: // Enter
+        case KEY_RETURN:
         case KEY_ENTER:
             return 1;
         case KEY_BACKSPACE:
-        case 0x7f: // DEL
+        case KEY_DELETE:
             i = data->res ? strlen(data->res) : 0;
             if (i > 0) {
                 data->res = realloc(data->res, i - 1);
@@ -140,7 +140,7 @@ static const char *const prompy_yesno_btns[] = {
     NULL
 };
 
-bool prompy_yesno(const char *title, const char *msg, int width) {
+bool prompt_yesno(const char *title, const char *msg, int width) {
     struct prompt_t data = {
         .title = title, .prompt = msg, .res = NULL, .buttons = prompy_yesno_btns,
         .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0

@@ -1,3 +1,4 @@
+#include "functions.h"
 #include "global.h"
 #include "cli.h"
 #include "filetree.h"

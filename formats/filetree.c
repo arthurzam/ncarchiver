@@ -3,8 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
-struct dir_t *filetree_addNode(struct dir_t *root, char *path)
-{
+struct dir_t *filetree_addNode(struct dir_t *root, char *path) {
     char *start = path, *end = NULL;
     struct dir_t *temp;
 
@@ -57,8 +56,7 @@ struct dir_t *filetree_addNode(struct dir_t *root, char *path)
     return temp;
 }
 
-void filetree_free(struct dir_t *root)
-{
+void filetree_free(struct dir_t *root) {
     struct dir_t *node, *next;
     struct dir_more_info_t *moreInfo;
     if (!root)
@@ -81,8 +79,7 @@ void filetree_free(struct dir_t *root)
 
 uint8_t sort_flags = SORT_DIRS_FIRST | SORT_COL_NAME;
 
-static int filetree_cmp(struct dir_t *x, struct dir_t *y)
-{
+static int filetree_cmp(struct dir_t *x, struct dir_t *y) {
     if (sort_flags & SORT_DIRS_FIRST) {
         if ((x->flags & NODE_ISDIR) != (y->flags & NODE_ISDIR)) {
             return ((x->flags & NODE_ISDIR) ? -1 : 1);
@@ -138,8 +135,7 @@ struct dir_t *filetree_sort(struct dir_t *list) {
     }
 }
 
-char *filetree_getpath(const struct dir_t *node)
-{
+char *filetree_getpath(const struct dir_t *node) {
     static char *path = NULL;
     static int pathLen = 0;
 
@@ -177,8 +173,7 @@ char *filetree_getpath(const struct dir_t *node)
     return path;
 }
 
-struct dir_t *filetree_createRoot()
-{
+struct dir_t *filetree_createRoot() {
     struct dir_t *root = TYPE_MALLOC(struct dir_t);
     *root = (struct dir_t){
         .parent = NULL, .prev = NULL, .next = NULL, .subs = NULL, .name = (char *)"/",
@@ -187,8 +182,7 @@ struct dir_t *filetree_createRoot()
     return root;
 }
 
-char **filetree_getArr(struct dir_t **nodes, unsigned nodes_size)
-{
+char **filetree_getArr(struct dir_t **nodes, unsigned nodes_size) {
     unsigned i;
     char **files = (char**)malloc(sizeof(char *) * (nodes_size + 1));
     for (i = 0; i < nodes_size; ++i)

@@ -2,9 +2,9 @@
 #include "filetree.h"
 
 #include <string.h>
+#include <ncurses.h>
 
-bool format_default_openArchive(struct archive_t *archive, char *path)
-{
+bool format_default_openArchive(struct archive_t *archive, char *path) {
     archive->path = strdup(path);
     archive->dir = NULL;
     archive->password = NULL;
@@ -13,8 +13,7 @@ bool format_default_openArchive(struct archive_t *archive, char *path)
     return true;
 }
 
-bool format_default_closeArchive(struct archive_t *archive)
-{
+bool format_default_closeArchive(struct archive_t *archive) {
     filetree_free(archive->dir);
     free(archive->comment);
     free(archive->password);
@@ -22,3 +21,15 @@ bool format_default_closeArchive(struct archive_t *archive)
     free(archive);
     return true;
 }
+
+#ifndef NDEBUG
+void _nc_abort(const char *file, int line, const char *msg) {
+    fprintf(loggerFile, "%s:%d Assert Error: %s\n", file, line, msg);
+    fclose(loggerFile);
+    erase();
+    refresh();
+    endwin();
+    fprintf(stderr, "%s:%d Assert Error: %s\n", file, line, msg);
+    exit(1);
+}
+#endif

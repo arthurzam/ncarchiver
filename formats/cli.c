@@ -119,7 +119,7 @@ bool start_subprocess(pid_t *pid, int *infd, int *outfd, const char *cmd, char *
     return false;
 }
 
-static char **cli_passwordArray(const char *const *arr, const char *str)
+static char **_cli_formatArray(const char *const *arr, const char *str)
 {
     size_t i, size = str ? arrlen(arr) : 0;
     char **passArgv = (char **)malloc(sizeof(char *) * (1 + size));
@@ -139,7 +139,7 @@ struct dir_t *cli_listFiles(struct archive_t *archive)
 
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_LIST), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **passArgv = _cli_formatArray(cli_format->passwordSwitch, archive->password);
     char **argv = arrcatdup(argv_cmd, cli_format->listSwitch, passArgv, argv_path, NULL);
     int i;
 
@@ -272,7 +272,7 @@ bool cli_extractFiles(struct archive_t *archive, const char *const *files, const
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_EXTRACT), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **passArgv = _cli_formatArray(cli_format->passwordSwitch, archive->password);
     char **argv = arrcatdup(argv_cmd, cli_format->extractSwitch, passArgv, argv_path, files, NULL);
 
     int res = cli_normal_runProcess(archive, argv, destinationFolder);
@@ -289,7 +289,7 @@ int cli_deleteFiles(struct archive_t *archive, char **files)
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_DELETE), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **passArgv = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **passArgv = _cli_formatArray(cli_format->passwordSwitch, archive->password);
     char **argv = arrcatdup(argv_cmd, cli_format->delSwitch, passArgv, argv_path, files, NULL);
 
     int res = cli_normal_runProcess(archive, argv, NULL);
@@ -306,7 +306,7 @@ bool cli_testFiles(struct archive_t *archive)
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_TEST), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **argv_pass = cli_passwordArray(cli_format->passwordSwitch, archive->password);
+    char **argv_pass = _cli_formatArray(cli_format->passwordSwitch, archive->password);
     char **argv = arrcatdup(argv_cmd, cli_format->testSwitch, argv_pass, argv_path, NULL);
 
     int res = cli_normal_runProcess(archive, argv, NULL);
@@ -331,7 +331,7 @@ bool cli_addFiles(struct archive_t *archive, const char *const *files, const str
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_ADD), NULL };
     char *argv_path[] = { archive->path, NULL };
-    char **argv_pass = cli_passwordArray(options->encryptHeaders ? cli_format->passwordHeadersSwitch : cli_format->passwordSwitch, archive->password ?: options->password);
+    char **argv_pass = _cli_formatArray(options->encryptHeaders ? cli_format->passwordHeadersSwitch : cli_format->passwordSwitch, archive->password ?: options->password);
     char *argv_add[5];
 
     int i = 0;
