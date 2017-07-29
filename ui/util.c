@@ -158,6 +158,10 @@ int ncresize(int minrows, int mincols) {
 
 void nccreate(int height, int width, const char *title)
 {
+    NC_ASSERT_RANGE(height, 0, winrows - 1);
+    NC_ASSERT_RANGE(width,  0, wincols - 1);
+    NC_ASSERT_NONNULL(title);
+
     int i;
 
     subwinr = winrows / 2 - height / 2;
@@ -218,7 +222,8 @@ void draw_label(int row, int col, const char *text, bool flag) {
 
 int ui_insert(ui_draw_func_t draw, ui_key_func_t key, void *data) {
     int i;
-    for (i = 0; ui_draw_funcs[i] != NULL; ++i);
+    for (i = 0; ui_draw_funcs[i] != NULL; ++i)
+        NC_ASSERT_RANGE(i, 0, UI_MAX_DEPTH - 1);
     ui_draw_funcs[i] = draw;
     ui_data[i] = data;
     ui_key_funcs[i] = key;

@@ -8,7 +8,6 @@
 #define KEY_TAB         '\t'	/* Tab key.   */
 #define KEY_ESC         '\033'	/* Escape Key.*/
 #define KEY_RETURN      '\012'	/* Return key */
-#define KEY_TAB         '\t'	/* Tab key    */
 #define KEY_F1          KEY_F(1)
 #define KEY_F2          KEY_F(2)
 #define KEY_F3          KEY_F(3)

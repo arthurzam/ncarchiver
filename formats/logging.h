@@ -20,10 +20,8 @@ extern FILE* loggerFile;
 
 void _nc_abort(const char *file, int line, const char *msg) __attribute__ ((__noreturn__));
 
-#define NC_ASSERT(expr,msg) while(!(expr)) {_nc_abort(__FILE__, __LINE__, msg); }
-#define NC_ASSERT_VAL(expr,val) NC_ASSERT((expr) == (val), #expr " != " #val)
-#define NC_ASSERT_RANGE(expr,min,max) NC_ASSERT((expr) >= (min) && (expr) <= (max), #expr " not in range [" #min " , " #max "]")
-#define NC_ASSERT_NONNULL(expr) NC_ASSERT((expr) != NULL, #expr " is NULL")
+#define NC_ASSERT(expr,msg) while(!(expr)) {_nc_abort(__FILE__, __LINE__, (msg)); }
+#define NC_ASSERT_X(expr,msg) NC_ASSERT((expr), (msg))
 
 #else
 
@@ -38,6 +36,13 @@ void _nc_abort(const char *file, int line, const char *msg) __attribute__ ((__no
 #define LOG_D(prefix, format, ...)
 #define LOG_I(prefix, format, ...)
 
+#define NC_ASSERT(expr,msg)
+#define NC_ASSERT_X(expr,msg) (void)(expr)
+
 #endif
+
+#define NC_ASSERT_VAL(expr,val)       NC_ASSERT((expr) == (val), #expr " != " #val)
+#define NC_ASSERT_RANGE(expr,min,max) NC_ASSERT((expr) >= (min) && (expr) <= (max), #expr " not in range [" #min " , " #max "]")
+#define NC_ASSERT_NONNULL(expr)       NC_ASSERT((expr) != NULL, #expr " is NULL")
 
 #endif // LOGGING_H

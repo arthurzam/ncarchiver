@@ -21,7 +21,7 @@ struct extractdialog_t {
     char *destination;
     struct dir_t **files;
     unsigned files_size;
-    int selectedObj;
+    unsigned selectedObj;
     int flags;
 };
 
@@ -58,18 +58,24 @@ static int extractdialog_key(int index, int key) {
             else
                 ++data->selectedObj;
             break;
+        case KEY_ESC:
         case 'q':
         case 'Q':
             if (data->selectedObj != ROW_DESTINATION)
-                return 2;
+                goto _close;
             break;
         case KEY_ENTER:
         case KEY_RETURN:
             if (data->selectedObj == ROW_CANCEL)
-                return 2;
+                goto _close;
             else if (data->selectedObj == ROW_OK) {
                 // TODO: extract files
-                return 2;
+                goto _close;
+            } else if (data->selectedObj == ROW_DESTINATION) {
+                char *res = fselect_init(data->destination, FSELECT_DIRS_ONLY);
+                free(data->destination);
+                data->destination = res;
+                break;
             }
             __attribute__((fallthrough));
         case KEY_SPACE:
@@ -80,6 +86,10 @@ static int extractdialog_key(int index, int key) {
             break;
     }
     return 0;
+_close:
+    free(data->destination);
+    data->destination = NULL;
+    return 2;
 }
 
 static void extractdialog_draw(int index) {
@@ -88,7 +98,9 @@ static void extractdialog_draw(int index) {
     nccreate(WINDOW_HEIGHT, WINDOW_WIDTH, "Extract Files");
 
     draw_label(2, 2, "Destination:", data->selectedObj == ROW_DESTINATION);
-    // TODO: draw textbox for destination
+    attron(A_UNDERLINE);
+    ncaddstr(2, 15, cropstr(data->destination, WINDOW_WIDTH - 19));
+    attroff(A_UNDERLINE);
 
     draw_label(4, 2, (data->flags & FLAG_ALL_FILES) ? "[*]" : "[ ]", data->selectedObj == ROW_FILES_ALL);
     ncaddstr  (4, 6, "All files");
@@ -105,7 +117,7 @@ static void extractdialog_draw(int index) {
 void extractdialog_init(struct dir_t **files, unsigned files_size) {
     struct extractdialog_t *data = TYPE_MALLOC(struct extractdialog_t);
     *data = (struct extractdialog_t) {
-        .destination = NULL, files = files, .files_size = files_size,
+        .destination = strdup(getHomeDir()), files = files, .files_size = files_size,
         .selectedObj = ROW_DESTINATION, .flags = (files_size == 0 ? FLAG_ALL_FILES : 0)
     };
     ui_insert(extractdialog_draw, extractdialog_key, data);

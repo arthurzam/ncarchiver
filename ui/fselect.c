@@ -51,7 +51,8 @@ static char **getDirContent(const char *path, int flags) {
     while ((ent = readdir(dir))) {
         if(ent->d_name[0] == '.' && (ent->d_name[1] == '\0' || (ent->d_name[1] == '.' && ent->d_name[2] == '\0')))
             continue;
-        if ((flags & 0x1) && ent->d_type != DT_DIR) // dirs only
+        NC_ASSERT(ent->d_type != DT_UNKNOWN, "readdir returned DT_UNKNOWN");
+        if ((flags & FSELECT_DIRS_ONLY) && ent->d_type != DT_DIR) // dirs only
             continue;
         arr = (char **)realloc(arr, sizeof(char *) * (arr_len + 2));
         len = strlen(ent->d_name);
@@ -80,7 +81,7 @@ static int fselect_key(int index, int key) {
             if (data->list.selected_row >= 0)
                 listview_key(&data->list, key);
             break;
-        case '\t':
+        case KEY_TAB:
             if (data->list.selected_row >= 0)
                 data->list.selected_row = -1;
             else if (data->list.selected_row == -1)
@@ -107,6 +108,11 @@ static int fselect_key(int index, int key) {
                         strcpy(data->path, ptr);
                 }
                 listview_init(&data->list, getDirContent(data->path, data->flags), WIN_MAX_HEIGHT - 7, WIN_WIDTH, 0);
+            } else if (data->flags & FSELECT_SELECT_FILES) {
+                char *res = strconcat(data->path, ptr, '/');
+                free(data->path);
+                data->path = res;
+                return 1;
             }
             break;
     }
@@ -116,7 +122,11 @@ static int fselect_key(int index, int key) {
 static void fselect_draw(int index) {
     const struct fselect_t *data = (const struct fselect_t *)ui_data[index];
 
-    nccreate(data->list.height + 7, WIN_WIDTH, "Select File");
+    const char * const title = (data->flags & FSELECT_SELECT_FILES) ? "Select File" :
+                               (data->flags & FSELECT_DIRS_ONLY)    ? "Select Directory" :
+                                                                      "Select Location";
+
+    nccreate(data->list.height + 7, WIN_WIDTH, title);
 
     attron(A_REVERSE);
     ncprint(2, 2, "%-*s", WIN_WIDTH - 4, data->path);
@@ -138,10 +148,10 @@ static void fselect_draw(int index) {
         attroff(A_REVERSE);
 }
 
-char *fselect_init(const char *path) {
+char *fselect_init(const char *path, unsigned flags) {
     struct fselect_t data;
     data.path = strdup(path);
-    data.flags = 0;
+    data.flags = flags;
     data.list.items = NULL;
     listview_init(&data.list, getDirContent(path, data.flags), WIN_MAX_HEIGHT - 7, WIN_WIDTH, 0);
 
@@ -151,5 +161,5 @@ char *fselect_init(const char *path) {
 
     arrfree(data.list.items);
 
-    return data.path;
+    return data.list.selected_row == -2 ? strdup(path) : data.path;
 }

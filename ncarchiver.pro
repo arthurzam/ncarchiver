@@ -49,7 +49,6 @@ SOURCES += \
     ui/prompt.c \
     ui/nodeinfo.c \
     ui/actions.c \
-    ui/compressdialog.c \
     ui/fselect.c \
     ui/prompt_list.c \
     ui/listview.c \
@@ -61,4 +60,6 @@ SOURCES += \
     formats/cli.c \
     formats/libarchive.c \
     formats/cli_7z.c \
-    formats/cli_zip.c
+    formats/cli_zip.c \
+    ui/newfiledialog.c \
+    ui/addfilesdialog.c

@@ -14,7 +14,7 @@ static struct {
     unsigned size;
 } types = {NULL, NULL, 0};
 
-struct compressdialog_t {
+struct newfiledialog_t {
     struct compression_options_t options;
     unsigned selected_row;
     unsigned selected_type;
@@ -26,7 +26,7 @@ static int _qsort_strtype(const void *a, const void *b)
     return strcmp((*(const struct mime_type_t **)a)->extension, (*(const struct mime_type_t **)b)->extension);
 }
 
-static void _compressdialog_setTypes()
+static void _newfiledialog_setTypes()
 {
     const struct mime_type_t *ptr;
     unsigned i;
@@ -55,7 +55,7 @@ static void _compressdialog_setTypes()
     types.names[i] = NULL;
 }
 
-static unsigned _compressdialog_mimeSize(const struct mime_type_t *mime)
+static unsigned _newfiledialog_mimeSize(const struct mime_type_t *mime)
 {
     unsigned size = 8;
     if (mime->compressionMethods || mime->compressionLevelMin != -1 || mime->compressionLevelMax != -1)
@@ -86,8 +86,8 @@ enum SelRows {
     ROW_ENCR_HDR
 };
 
-static int compressdialog_key(int index, int key) {
-    struct compressdialog_t *data = (struct compressdialog_t *)ui_data[index];
+static int newfiledialog_key(int index, int key) {
+    struct newfiledialog_t *data = (struct newfiledialog_t *)ui_data[index];
     const struct mime_type_t *mime = types.mimes[data->selected_type];
     switch (key) {
         case KEY_TAB:
@@ -118,7 +118,7 @@ static int compressdialog_key(int index, int key) {
             break;
         case KEY_END:
             data->selected_row = ROW_OK;
-            return compressdialog_key(index, KEY_UP);
+            return newfiledialog_key(index, KEY_UP);
         case KEY_RETURN:
         case KEY_ENTER:
             if (data->selected_row <= ROW_CANCEL)
@@ -133,7 +133,7 @@ static int compressdialog_key(int index, int key) {
                     data->options.compressionLevel = mime->compressionLevelDefault;
                     data->options.compressionMethod = mime->compressionMethodDefault;
                     data->options.encryptionMethod = mime->encryptionMethodDefault;
-                    data->size = _compressdialog_mimeSize(mime);
+                    data->size = _newfiledialog_mimeSize(mime);
                 }
             }
             else if (data->selected_row == ROW_COMPR_METHOD)
@@ -142,7 +142,7 @@ static int compressdialog_key(int index, int key) {
                 data->options.encryptionMethod = prompt_list_init("Encryption Method", types.mimes[data->selected_type]->encryptionMethods, data->options.encryptionMethod);
             else if (data->selected_row == ROW_LOCATION)
             {
-                char *res = fselect_init(data->options.location ?: "/tmp");
+                char *res = fselect_init(data->options.location, FSELECT_DIRS_ONLY);
                 free(data->options.location);
                 data->options.location = res;
             }
@@ -202,7 +202,7 @@ static int compressdialog_key(int index, int key) {
 
 #define WINDOW_WIDTH 60
 
-static void _compressdialog_draw_textbox(int row, int col, const char *text, bool hide)
+static void _newfiledialog_draw_textbox(int row, int col, const char *text, bool hide)
 {
     const unsigned maxLen = WINDOW_WIDTH - 2 - col;
     unsigned i;
@@ -223,17 +223,17 @@ static void _compressdialog_draw_textbox(int row, int col, const char *text, boo
     attroff(A_UNDERLINE);
 }
 
-static void compressdialog_draw(int index) {
-    struct compressdialog_t *data = (struct compressdialog_t *)ui_data[index];
+static void newfiledialog_draw(int index) {
+    struct newfiledialog_t *data = (struct newfiledialog_t *)ui_data[index];
     const struct mime_type_t *mime = types.mimes[data->selected_type];
     unsigned row = 2;
 
     nccreate(data->size, WINDOW_WIDTH, "Create New Archive");
 
     draw_label                  (row, 2, "Location:", data->selected_row == ROW_LOCATION);
-    _compressdialog_draw_textbox(row++, 12, data->options.location, false);
+    _newfiledialog_draw_textbox(row++, 12, data->options.location, false);
     draw_label                  (row, 2, "Filename:", data->selected_row == ROW_FILENAME);
-    _compressdialog_draw_textbox(row++, 12, data->options.filename, false);
+    _newfiledialog_draw_textbox(row++, 12, data->options.filename, false);
     draw_label                  (row, 2, "Format:"  , data->selected_row == ROW_TYPE);
     attron(A_UNDERLINE);
     ncprint                     (row++, 12, "%s (*.%s)", mime->prettyText, mime->extension);
@@ -267,7 +267,7 @@ static void compressdialog_draw(int index) {
         ncaddstr  (row++, 14, mime->encryptionMethods[data->options.encryptionMethod]);
 
         draw_label                  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
-        _compressdialog_draw_textbox(row++, 14, data->options.password, true);
+        _newfiledialog_draw_textbox(row++, 14, data->options.password, true);
 
         if (data->selected_row == ROW_ENCR_HDR)
             attron(A_REVERSE);
@@ -282,19 +282,20 @@ static void compressdialog_draw(int index) {
     draw_label(row, (3 * WINDOW_WIDTH / 4) - 3, "Cancel", data->selected_row == ROW_CANCEL);
 }
 
-struct compression_options_t *compressdialog_init() {
+struct compression_options_t *newfiledialog_init() {
     if (!types.names)
-        _compressdialog_setTypes();
+        _newfiledialog_setTypes();
     const struct mime_type_t *mime = types.mimes[0];
-    struct compressdialog_t *data = TYPE_MALLOC(struct compressdialog_t);
-    memset(data, 0, sizeof(struct compressdialog_t));
+    struct newfiledialog_t *data = TYPE_MALLOC(struct newfiledialog_t);
+    memset(data, 0, sizeof(struct newfiledialog_t));
+    data->options.location = strdup(getHomeDir());
     data->options.compressionLevel = mime->compressionLevelDefault;
     data->options.compressionMethod = mime->compressionMethodDefault;
     data->options.encryptionMethod = mime->encryptionMethodDefault;
-    data->size = _compressdialog_mimeSize(mime);
+    data->size = _newfiledialog_mimeSize(mime);
     data->options.mime = mime;
 
-    ui_insert(compressdialog_draw, compressdialog_key, data);
+    ui_insert(newfiledialog_draw, newfiledialog_key, data);
     while (input_handle(0) != 1);
     ui_remove();
 

@@ -12,16 +12,11 @@
 
 #include <xdgmime/xdgmime.h>
 
-
-
-// int read_only = 0;
-long update_delay = 100;
-// int cachedir_tags = 0;
+#define UPDATE_DELAY 100
 
 static int min_rows = 17, min_cols = 60;
 static int ncurses_init = 0;
 static int ncurses_tty = 0; /* Explicitely open /dev/tty instead of using stdio */
-static long lastupdate = 999;
 
 
 static void screen_draw() {
@@ -42,11 +37,14 @@ int input_handle(int wait)
     int i;
     struct timeval tv;
 
+    NC_ASSERT_RANGE(wait, -1, 1);
+
     if (wait != 1)
         screen_draw();
     else {
+        static long lastupdate = 999;
         gettimeofday(&tv, (void *)NULL);
-        tv.tv_usec = (1000 * (tv.tv_sec % 1000) + (tv.tv_usec / 1000)) / update_delay;
+        tv.tv_usec = (1000 * (tv.tv_sec % 1000) + (tv.tv_usec / 1000)) / UPDATE_DELAY;
         if (lastupdate != tv.tv_usec) {
             screen_draw();
             lastupdate = tv.tv_usec;
@@ -66,6 +64,14 @@ int input_handle(int wait)
             nodelay(stdscr, wait?1:0);
             screen_draw();
             continue;
+        }
+        if (ch == KEY_ESC) {
+            nodelay(stdscr, 1);
+            if ((ch = getch()) == ERR)
+                ch = KEY_ESC;
+//            else
+//                ch = KEY_ALT(ch);
+            nodelay(stdscr, 0);
         }
         for (i = 0; ui_key_funcs[i] != NULL; ++i);
         i = ui_key_funcs[i - 1](i - 1, ch);
@@ -123,8 +129,7 @@ static void init_nc()
 
 struct archive_t *arc;
 
-static const struct format_t *findFormat(const char *mime)
-{
+static const struct format_t *findFormat(const char *mime) {
     section_foreach_entry(format_array, const struct format_t *, iter) {
         const struct mime_type_t *ptr;
         if ((*iter)->mime_types_rw)
@@ -148,12 +153,10 @@ static const struct format_t *findFormat(const char *mime)
     return NULL;
 }
 
-FILE* loggerFile;
-
 //#define DEFAULT_PATH "/home/arthur/Downloads/cm/addonsu-arm-signed.zip"
 //#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/bb.7z"
-#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
-//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/firefox-QMPlay2.tar.gz"
+//#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/archive.7z"
+#define DEFAULT_PATH "/home/arthur/dev/build-ncarchiver-Desktop-Debug/firefox-QMPlay2.tar.gz"
 
 #include <magic.h>
 
@@ -171,24 +174,25 @@ int main(int argc, char **argv)
     return 0;
 #endif
 
-
+#ifndef NDEBUG
     loggerFile = fopen("/tmp/ncarchiver.log", "w");
+#endif
     read_locale();
 //  argv_parse(argc, argv);
 
-//  if(dir_ui == 2)
     init_nc();
-
 
     char *path = argc > 1 ? argv[1] : DEFAULT_PATH;
     const char *mime = xdg_mime_get_mime_type_for_file(path, NULL);
     printf("mime is %s\n", mime);
+    NC_ASSERT_NONNULL(mime);
     const struct format_t *format = findFormat(mime);
+    NC_ASSERT_NONNULL(format);
     arc->mime = mime;
     arc->format = format;
     format->openArchive(arc, path);
     arc->dir = format->listFiles(arc);
-    if(!arc->dir) {
+    if (!arc->dir) {
         switch (arc->error) {
             case ARCHIVE_ERROR_BAD_PASSWORD:
                 arc->password = prompt_text("Password", "Enter password:");
@@ -199,6 +203,7 @@ int main(int argc, char **argv)
                 break;
         }
     }
+    NC_ASSERT_NONNULL(arc->dir);
     browse_init(arc->dir);
 
     while (input_handle(0) != 1);
@@ -211,6 +216,8 @@ _exit:
     }
     //  exclude_clear();
     format->closeArchive(arc);
+#ifndef NDEBUG
     fclose(loggerFile);
+#endif
     return 0;
 }

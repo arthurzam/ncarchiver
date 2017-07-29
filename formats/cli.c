@@ -124,10 +124,7 @@ static char **_cli_formatArray(const char *const *arr, const char *str)
     size_t i, size = str ? arrlen(arr) : 0;
     char **passArgv = (char **)malloc(sizeof(char *) * (1 + size));
     for (i = 0; i < size; i++) {
-        if (-1 == asprintf(passArgv + i, arr[i], str)) {
-            LOG_e("cli", "Error with asprintf");
-            abort();
-        }
+        NC_ASSERT_X(-1 != asprintf(passArgv + i, arr[i], str), "Error with asprintf");
     }
     passArgv[size] = NULL;
     return passArgv;
@@ -168,12 +165,12 @@ static bool _check_errors(const char* line, const char *const *patterns)
         return false;
     int ret;
     regex_t re;
-    const char *const *iter;
 
-    for (iter = patterns; *iter != NULL; ++iter) {
-        ret = regcomp(&re, *iter, REG_EXTENDED | REG_NOSUB);
+    for (; *patterns != NULL; ++patterns) {
+        ret = regcomp(&re, *patterns, REG_EXTENDED | REG_NOSUB);
         if (ret != REG_NOERROR) {
-            LOG_E("cli regex", "Bad regex - %s", *iter);
+            LOG_E("cli regex", "Bad regex - %s", *patterns);
+            continue;
         }
         ret = regexec(&re, line, 0, NULL, 0);
         regfree(&re);
@@ -320,6 +317,8 @@ bool cli_testFiles(struct archive_t *archive)
 
 static const char *_archive_mime_finder(const char *mime, const struct pMimeStr* args)
 {
+    NC_ASSERT_NONNULL(mime);
+    NC_ASSERT_NONNULL(args);
     for (; args->mime; args++)
         if (0 == strcmp(args->mime, mime))
             return args->str;
@@ -328,11 +327,11 @@ static const char *_archive_mime_finder(const char *mime, const struct pMimeStr*
 
 bool cli_addFiles(struct archive_t *archive, const char *const *files, const struct compression_options_t *options)
 {
+    NC_ASSERT_NONNULL(options);
     struct cli_format_t *cli_format = (struct cli_format_t *)archive->format;
     char *argv_cmd[] = { getCorrectCommand(cli_format, CLI_ADD), NULL };
-    char *argv_path[] = { archive->path, NULL };
     char **argv_pass = _cli_formatArray(options->encryptHeaders ? cli_format->passwordHeadersSwitch : cli_format->passwordSwitch, archive->password ?: options->password);
-    char *argv_add[5];
+    char *argv_add[6];
 
     int i = 0;
     if (options->compressionLevel > -1) {
@@ -344,9 +343,10 @@ bool cli_addFiles(struct archive_t *archive, const char *const *files, const str
         asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->compressionMethodSwitch), options->mime->compressionMethods[options->compressionMethod]);
     if (options->encryptionMethod > -1)
         asprintf(argv_add + (i++), _archive_mime_finder(archive->mime, cli_format->encryptionMethodSwitch), options->mime->encryptionMethods[options->encryptionMethod]);
+    argv_add[i++] = archive->path;
     argv_add[i] = NULL;
 
-    char **argv = arrcatdup(argv_cmd, cli_format->addSwitch, argv_pass, argv_add, argv_path, files, NULL);
+    char **argv = arrcatdup(argv_cmd, cli_format->addSwitch, argv_pass, argv_add, files, NULL);
 
     int res = cli_normal_runProcess(archive, argv, NULL);
 

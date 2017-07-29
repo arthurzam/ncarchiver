@@ -68,11 +68,11 @@ static void browse_draw(int index) {
     mvaddch(1, 3, ' ');
     char *tmp = filetree_getpath(curr);
     mvaddstr(1, 4, cropstr(tmp, wincols-8));
-    mvaddch(1, 4+((int)strlen(tmp) > wincols-8 ? wincols-8 : (int)strlen(tmp)), ' ');
+    mvaddch (1, 4 + min((int)strlen(tmp), wincols - 8), ' ');
 
     /* bottom line - shortcuts */
     attron(A_REVERSE);
-    mvaddstr(winrows - 1, 1, "(N)ew   (O)pen   (Q)uit   (D)elete   (T)est");
+    mvaddstr(winrows - 1, 1, "(N)ew   (O)pen   (Q)uit   (D)elete   (T)est   (I)nfo   (A)dd   (E)xtract");
     attroff(A_REVERSE);
 
     /* get start position */
@@ -114,8 +114,7 @@ static int browse_key(int index, int ch) {
             }
             break;
         case KEY_SPACE:
-            if (selected != curr->parent)
-            {
+            if (selected != curr->parent) {
                 selected->flags ^= NODE_SELECTED;
                 if (selected->flags & NODE_SELECTED) {
                     selected_array = realloc(selected_array, sizeof(struct dir_t *) * (++selected_size));
@@ -161,7 +160,7 @@ static int browse_key(int index, int ch) {
             break;
         case 'n':
         {
-            struct compression_options_t *options = compressdialog_init();
+            struct compression_options_t *options = newfiledialog_init();
             if (!options)
                 break;
             const char *files[1] = {NULL};
@@ -202,10 +201,23 @@ static int browse_key(int index, int ch) {
         case 'i':
             nodeinfo_init(selected);
             break;
+        case 'E':
         case 'e':
             extractdialog_init(selected_array, selected_size);
             break;
-
+        case 'A':
+        case 'a':
+            addfilesdialog_init(curr, NULL);
+            break;
+//        default:
+//        {
+//            char str[500];
+//            sprintf(str, "%d", ch);
+//            prompt_yesno("KEY", str, 24);
+//            sprintf(str, "%d %c", ch - KEY_MAX, ch - KEY_MAX);
+//            prompt_yesno("KEY", str, 24);
+//        }
+//            break;
     }
     return 0;
 }

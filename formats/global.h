@@ -145,6 +145,8 @@ enum FormatFlags {
 bool format_default_openArchive(struct archive_t *archive, char *path);
 bool format_default_closeArchive(struct archive_t *archive);
 
+const char *getHomeDir() __attribute__((pure));
+
 #define TYPE_MALLOC(type) (type *)malloc(sizeof(type))
 #define STRING_ARR(...) (const char *[]){__VA_ARGS__, NULL}
 

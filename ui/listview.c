@@ -81,6 +81,7 @@ void listview_draw(const struct listview_data_t *data) {
 }
 
 void listview_init(struct listview_data_t *data, char **items, unsigned height, unsigned width, unsigned selected) {
+    NC_ASSERT(data->items != items, "arrays shouldn't be set already")
     if (data->items)
         arrfree(data->items);
     data->items = items;

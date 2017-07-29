@@ -180,8 +180,7 @@ static bool libarchive_openArchive(struct archive_t *_archive, char *path) {
     return format_default_openArchive(&archive->a, path);
 }
 
-static struct dir_t *libarchive_listFiles(struct archive_t *_archive)
-{
+static struct dir_t *libarchive_listFiles(struct archive_t *_archive) {
     struct archive_libarchive_t *archive = (struct archive_libarchive_t *)_archive;
 
     if (!_libarchive_initReader(archive))

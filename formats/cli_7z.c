@@ -91,8 +91,9 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                 } else if (NULL != strstr(line, "Error: ")) {
                     LOG_E("7z", "error parsing header: %s", line + 7);
                     return NULL;
-                } else if (strstartswith(line, "Listing archive:"))
+                } else if (strstartswith(line, "Listing archive:")) {
                     LOG_I("7z", "listing archive: %s", line + 16);
+                }
                 break;
             case 2: // parse archive information
                 if (0 == strcmp(line, "----------"))
@@ -106,8 +107,9 @@ static struct dir_t *cli_7z_processList(struct archive_t *archive, FILE *inF, FI
                     state = 3;
                 } else if (strstartswith(line, "Type = "))
                     LOG_I("7z", "type: %s", line + 7);
-                else if (strstartswith(line, "Method = "))
+                else if (strstartswith(line, "Method = ")) {
                     LOG_I("7z", "method: %s", line + 9);
+                }
                 break;
             case 3: // parse comment
                 if (0 == strcmp(line, "----------"))

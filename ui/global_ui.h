@@ -17,11 +17,6 @@
 
 extern struct archive_t *arc;
 
-/* read-only flag */
-// extern int read_only;
-/* minimum screen update interval when calculating, in ms */
-extern long update_delay;
-
 /* handle input from keyboard and update display */
 int input_handle(int);
 
@@ -31,10 +26,17 @@ int input_handle(int);
 
 void browse_init(struct dir_t *base);
 void nodeinfo_init(struct dir_t *node);
-struct compression_options_t *compressdialog_init();
+struct compression_options_t *newfiledialog_init();
+void addfilesdialog_init(struct dir_t *destination, char **files);
 void extractdialog_init(struct dir_t **files, unsigned files_size);
-char *fselect_init(const char *path);
 unsigned prompt_list_init(const char *title, const char *const *items, unsigned defaultItem);
+
+enum FselectFlags {
+    FSELECT_DIRS_ONLY = 0x1,
+    FSELECT_SELECT_FILES = 0x2
+};
+
+char *fselect_init(const char *path, unsigned flags);
 
 /* widgets */
 void draw_label(int row, int col, const char *text, bool flag);
