@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+// #define NDEBUG
+
 #ifndef NDEBUG
 
 extern FILE* loggerFile;

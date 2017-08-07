@@ -3,19 +3,12 @@
 #include "filetree.h"
 #include "actions.h"
 #include "functions.h"
+#include "listview.h"
 
 #include <string.h>
 #include <stdlib.h>
 
 #include <ncurses.h>
-
-struct listview_data_t {
-    char **items;
-    unsigned items_count;
-    int first_row;
-    int selected_row;
-    unsigned height, width;
-};
 
 void listview_key(struct listview_data_t *data, int key) {
     switch (key) {
@@ -37,7 +30,7 @@ void listview_key(struct listview_data_t *data, int key) {
             if (data->selected_row != 0)
                 --data->selected_row;
             else if (data->first_row != 0)
-                    --data->first_row;
+                --data->first_row;
             break;
         case KEY_DOWN:
             if (data->selected_row < 0)
@@ -81,7 +74,7 @@ void listview_draw(const struct listview_data_t *data) {
 }
 
 void listview_init(struct listview_data_t *data, char **items, unsigned height, unsigned width, unsigned selected) {
-    NC_ASSERT(data->items != items, "arrays shouldn't be set already")
+    NC_ASSERT(data->items != items, "arrays shouldn't be set already");
     if (data->items)
         arrfree(data->items);
     data->items = items;

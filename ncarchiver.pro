@@ -31,7 +31,8 @@ HEADERS += \
     formats/filetree.h \
     formats/cli.h \
     formats/logging.h \
-    formats/functions.h
+    formats/functions.h \
+    ui/textbox.h
 
 SOURCES += \
     xdgmime/xdgmime.c \
@@ -62,4 +63,5 @@ SOURCES += \
     formats/cli_7z.c \
     formats/cli_zip.c \
     ui/newfiledialog.c \
-    ui/addfilesdialog.c
+    ui/addfilesdialog.c \
+    ui/textbox.c
