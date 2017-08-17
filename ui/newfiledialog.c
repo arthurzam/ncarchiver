@@ -1,6 +1,7 @@
 #include "global.h"
 #include "global_ui.h"
 #include "filetree.h"
+#include "textbox.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -19,6 +20,9 @@ struct newfiledialog_t {
     unsigned selected_row;
     unsigned selected_type;
     unsigned size;
+    struct textbox_data_t tb_location;
+    struct textbox_data_t tb_filename;
+    struct textbox_data_t tb_password;
 };
 
 static int _qsort_strtype(const void *a, const void *b)
@@ -43,7 +47,7 @@ static void _newfiledialog_setTypes()
                 if (i == types.size)
                 {
                     ++types.size;
-                    types.mimes = (const struct mime_type_t **)realloc(types.mimes, sizeof(const struct mime_type_t *) * types.size);
+                    types.mimes = realloc(types.mimes, sizeof(const struct mime_type_t *) * types.size);
                     types.mimes[i] = ptr;
                 }
             }
@@ -88,6 +92,14 @@ enum SelRows {
 
 static int newfiledialog_key(int index, int key) {
     struct newfiledialog_t *data = (struct newfiledialog_t *)ui_data[index];
+    struct textbox_data_t *selectedTB = (
+                    data->selected_row == ROW_FILENAME  ? &data->tb_filename :
+                    data->selected_row == ROW_ENCR_PASS ? &data->tb_password :
+                    NULL
+                );
+    if (selectedTB && textbox_key(selectedTB, key))
+        return 0;
+
     const struct mime_type_t *mime = types.mimes[data->selected_type];
     switch (key) {
         case KEY_TAB:
@@ -173,55 +185,10 @@ static int newfiledialog_key(int index, int key) {
             }
             break;
     }
-    char **selectedTB = (//data->selected_row == ROW_LOCATION  ? &(data->options.location) :
-                         data->selected_row == ROW_FILENAME  ? &(data->options.filename) :
-                         data->selected_row == ROW_ENCR_PASS ? &(data->options.password) :
-                         NULL);
-    if (!selectedTB)
-        return 0;
-    size_t i;
-    if (key == KEY_BACKSPACE || key == KEY_DELETE)
-    {
-        i = *selectedTB ? strlen(*selectedTB) : 0;
-        if (i > 0)
-        {
-            *selectedTB = realloc(*selectedTB, i - 1);
-            if (*selectedTB)
-                (*selectedTB)[i - 1] = '\0';
-        }
-    }
-    else if (isprint(key))
-    {
-        i = *selectedTB ? strlen(*selectedTB) : 0;
-        *selectedTB = realloc(*selectedTB, i + 2);
-        (*selectedTB)[i] = key;
-        (*selectedTB)[i + 1] = '\0';
-    }
     return 0;
 }
 
 #define WINDOW_WIDTH 60
-
-static void _newfiledialog_draw_textbox(int row, int col, const char *text, bool hide)
-{
-    const unsigned maxLen = WINDOW_WIDTH - 2 - col;
-    unsigned i;
-    i = text ? strlen(text) : 0;
-    attron(A_UNDERLINE);
-
-    if (hide)
-    {
-        i = i > maxLen ? maxLen : i;
-        mvhline(subwinr + row, subwinc + col,     '*', i);
-        mvhline(subwinr + row, subwinc + col + i, ' ', maxLen - i);
-    }
-    else
-    {
-        i = i > maxLen ? i - maxLen : 0;
-        ncprint(row, col, "%-*s", maxLen, (text ?: "") + i);
-    }
-    attroff(A_UNDERLINE);
-}
 
 static void newfiledialog_draw(int index) {
     struct newfiledialog_t *data = (struct newfiledialog_t *)ui_data[index];
@@ -230,13 +197,13 @@ static void newfiledialog_draw(int index) {
 
     nccreate(data->size, WINDOW_WIDTH, "Create New Archive");
 
-    draw_label                  (row, 2, "Location:", data->selected_row == ROW_LOCATION);
-    _newfiledialog_draw_textbox(row++, 12, data->options.location, false);
-    draw_label                  (row, 2, "Filename:", data->selected_row == ROW_FILENAME);
-    _newfiledialog_draw_textbox(row++, 12, data->options.filename, false);
-    draw_label                  (row, 2, "Format:"  , data->selected_row == ROW_TYPE);
+    draw_label  (row, 2, "Location:", data->selected_row == ROW_LOCATION);
+    textbox_draw(&data->tb_location, row++, 12, data->selected_row == ROW_LOCATION ? TEXTBOX_SELECTED : 0);
+    draw_label  (row, 2, "Filename:", data->selected_row == ROW_FILENAME);
+    textbox_draw(&data->tb_filename, row++, 12, data->selected_row == ROW_FILENAME ? TEXTBOX_SELECTED : 0);
+    draw_label  (row, 2, "Format:"  , data->selected_row == ROW_TYPE);
     attron(A_UNDERLINE);
-    ncprint                     (row++, 12, "%s (*.%s)", mime->prettyText, mime->extension);
+    ncprint     (row++, 12, "%s (*.%s)", mime->prettyText, mime->extension);
     attroff(A_UNDERLINE);
 
 
@@ -266,8 +233,8 @@ static void newfiledialog_draw(int index) {
         draw_label(row, 4, "Method:", data->selected_row == ROW_ENCR_METHOD);
         ncaddstr  (row++, 14, mime->encryptionMethods[data->options.encryptionMethod]);
 
-        draw_label                  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
-        _newfiledialog_draw_textbox(row++, 14, data->options.password, true);
+        draw_label  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
+        textbox_draw(&data->tb_password, row++, 14, (data->selected_row == ROW_ENCR_PASS ? TEXTBOX_SELECTED : 0) | TEXTBOX_HIDE);
 
         if (data->selected_row == ROW_ENCR_HDR)
             attron(A_REVERSE);
@@ -288,7 +255,9 @@ struct compression_options_t *newfiledialog_init() {
     const struct mime_type_t *mime = types.mimes[0];
     struct newfiledialog_t *data = TYPE_MALLOC(struct newfiledialog_t);
     memset(data, 0, sizeof(struct newfiledialog_t));
-    data->options.location = strdup(getHomeDir());
+    textbox_init(&data->tb_location, getHomeDir(), isprint, WINDOW_WIDTH - 14);
+    textbox_init(&data->tb_filename, NULL, isprint, WINDOW_WIDTH - 14);
+    textbox_init(&data->tb_password, NULL, isprint, WINDOW_WIDTH - 16);
     data->options.compressionLevel = mime->compressionLevelDefault;
     data->options.compressionMethod = mime->compressionMethodDefault;
     data->options.encryptionMethod = mime->encryptionMethodDefault;

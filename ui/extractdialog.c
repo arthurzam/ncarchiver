@@ -77,7 +77,7 @@ static int extractdialog_key(int index, int key) {
                 data->destination = res;
                 break;
             }
-            __attribute__((fallthrough));
+            // fallthrough
         case KEY_SPACE:
             if (data->selectedObj == ROW_RECREATE_PATH)
                 data->flags ^= FLAG_JUNK_PATH;

@@ -2,6 +2,7 @@
 #include "global_ui.h"
 #include "filetree.h"
 #include "actions.h"
+#include "functions.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -39,9 +40,7 @@ static void nodeinfo_draw(int index) {
     const char *path = filetree_getpath(node);
     unsigned moreCount = 0, i;
     unsigned row = 2;
-    unsigned width = 26; // length of buttons
-    if (width < (i = strlen(path) + 6))
-        width = i;
+    unsigned width = min((unsigned)26 /* length of buttons */, strlen(path) + 6);
     if (node->moreInfo)
         for (; node->moreInfo[moreCount].key != NULL; ++moreCount)
             if (width < (i = strlen(node->moreInfo[moreCount].key) + strlen(node->moreInfo[moreCount].value) + 2))

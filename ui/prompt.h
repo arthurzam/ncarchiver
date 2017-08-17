@@ -13,7 +13,7 @@ int prompt_number(const char *title, const char *prompt) __attribute__ ((__nonnu
 
 int prompt_msgbox(const char *title, const char *msg, const char *const *buttons, int defaultBtn, int width) __attribute__ ((__nonnull__));
 bool prompt_yesno(const char *title, const char *msg, int width) __attribute__ ((__nonnull__));
-void prompy_ok(const char *title, const char *msg, int width) __attribute__ ((__nonnull__));
+void prompt_ok(const char *title, const char *msg, int width) __attribute__ ((__nonnull__));
 
 
 enum OverwriteFlags {

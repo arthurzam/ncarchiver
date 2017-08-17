@@ -1,6 +1,7 @@
 #include "global.h"
 #include "global_ui.h"
 #include "filetree.h"
+#include "textbox.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -9,19 +10,18 @@
 #include <ctype.h>
 
 struct prompt_t {
+    struct textbox_data_t textbox;
     const char *title;
     const char *prompt;
-    char *res;
     const char *const *buttons;
-    int (*check_func)(int);
-    unsigned width;
     unsigned selected_button;
-    unsigned cursor;
 };
 
 static int prompt_key(int index, int key) {
     struct prompt_t *data = (struct prompt_t *)ui_data[index];
-    size_t i;
+    if (data->textbox.check_func && textbox_key(&data->textbox, key))
+        return 0;
+
     switch(key) {
         case KEY_TAB:
             if (data->buttons[++data->selected_button] == NULL)
@@ -30,17 +30,9 @@ static int prompt_key(int index, int key) {
         case KEY_RETURN:
         case KEY_ENTER:
             return 1;
-        case KEY_BACKSPACE:
-        case KEY_DELETE:
-            i = data->res ? strlen(data->res) : 0;
-            if (i > 0) {
-                data->res = realloc(data->res, i - 1);
-                if (data->res)
-                    data->res[i - 1] = '\0';
-            }
-            return 0;
     }
-    if (!data->check_func) {
+    size_t i;
+    if (!data->textbox.check_func) {
         if (isalpha(key))
             for (i = 0; data->buttons[i] != NULL; ++i)
                 if (tolower(key) == data->buttons[i][0]) {
@@ -52,11 +44,6 @@ static int prompt_key(int index, int key) {
                 data->selected_button = i;
                 return 1;
             }
-    } else if (data->check_func(key)) {
-        i = data->res ? strlen(data->res) : 0;
-        data->res = realloc(data->res, i + 2);
-        data->res[i] = key;
-        data->res[i + 1] = '\0';
     }
     return 0;
 }
@@ -65,21 +52,16 @@ static void prompt_draw(int index) {
     struct prompt_t *data = (struct prompt_t *)ui_data[index];
     unsigned col = 2, i;
 
-    nccreate(data->check_func ? 7 : 6, data->width, data->title);
+    nccreate(data->textbox.check_func ? 7 : 6, data->textbox.width + 4, data->title);
 
     ncaddstr(2,2, data->prompt);
-    if (data->check_func) {
-        attron(A_REVERSE);
-        i = data->res ? strlen(data->res) : 0;
-        i = i > data->width - 4 ? i - data->width + 4 : 0;
-        ncprint(3,2,"%-*s", data->width - 4, (data->res ?: "") + i);
-        attroff(A_REVERSE);
-    }
+    if (data->textbox.check_func)
+        textbox_draw(&data->textbox, 3, 2, TEXTBOX_SELECTED);
 
     for (i = 0; data->buttons[i] != NULL; ++i) {
         if (i == data->selected_button)
             attron(A_REVERSE);
-        if (data->check_func)
+        if (data->textbox.check_func)
             ncaddstr(5, col, data->buttons[i]);
         else
             ncaddstr(4, col, data->buttons[i] + 1);
@@ -103,34 +85,34 @@ static const char *const prompt_text_btns[] = {
 
 char *prompt_text(const char *title, const char *prompt) {
     struct prompt_t data = {
-        .title = title, .prompt = prompt, .res = NULL, .buttons = prompt_text_btns,
-        .check_func = isprint, .width = 30, .selected_button = 0, .cursor = 0
+        .textbox = TEXTBOX_INIT_EMPTY(isprint, 26), .title = title,
+        .prompt = prompt, .buttons = prompt_text_btns, .selected_button = 0
     };
     prompt_init(&data);
     if (data.selected_button == 1) // Cancel
-        free(data.res);
-    return data.selected_button == 0 ? data.res : NULL;
+        free(data.textbox.str);
+    return data.selected_button == 0 ? data.textbox.str : NULL;
 }
 
 int prompt_number(const char *title, const char *prompt) {
     struct prompt_t data = {
-        .title = title, .prompt = prompt, .res = NULL, .buttons = prompt_text_btns,
-        .check_func = isdigit, .width = 30, .selected_button = 0, .cursor = 0
+        .textbox = TEXTBOX_INIT_EMPTY(isdigit, 26), .title = title,
+        .prompt = prompt, .buttons = prompt_text_btns, .selected_button = 0
     };
     prompt_init(&data);
-    if (!data.res) return -1;
-    int res = data.selected_button == 0 ? atoi(data.res) : -1;
-    free(data.res);
+    if (!data.textbox.str) return -1;
+    int res = data.selected_button == 0 ? atoi(data.textbox.str) : -1;
+    free(data.textbox.str);
     return res;
 }
 
 int prompt_msgbox(const char *title, const char *msg, const char *const *buttons, int defaultBtn, int width) {
     struct prompt_t data = {
-        .title = title, .prompt = msg, .res = NULL, .buttons = buttons,
-        .check_func = NULL, .width = width, .selected_button = defaultBtn, .cursor = 0
+        .textbox = TEXTBOX_INIT_EMPTY(NULL, width - 4), .title = title,
+        .prompt = msg, .buttons = buttons, .selected_button = defaultBtn
     };
     prompt_init(&data);
-    free(data.res);
+    NC_ASSERT_VAL(data.textbox.str, NULL);
     return data.selected_button;
 }
 
@@ -142,11 +124,11 @@ static const char *const prompy_yesno_btns[] = {
 
 bool prompt_yesno(const char *title, const char *msg, int width) {
     struct prompt_t data = {
-        .title = title, .prompt = msg, .res = NULL, .buttons = prompy_yesno_btns,
-        .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0
+        .textbox = TEXTBOX_INIT_EMPTY(NULL, width - 4), .title = title,
+        .prompt = msg, .buttons = prompy_yesno_btns, .selected_button = 0
     };
     prompt_init(&data);
-    free(data.res);
+    NC_ASSERT_VAL(data.textbox.str, NULL);
     return data.selected_button == 0;
 }
 
@@ -155,13 +137,13 @@ static const char *const prompy_ok_btns[] = {
     NULL
 };
 
-void prompy_ok(const char *title, const char *msg, int width) {
+void prompt_ok(const char *title, const char *msg, int width) {
     struct prompt_t data = {
-        .title = title, .prompt = msg, .res = NULL, .buttons = prompy_ok_btns,
-        .check_func = NULL, .width = width, .selected_button = 0, .cursor = 0
+        .textbox = TEXTBOX_INIT_EMPTY(NULL, width - 4), .title = title,
+        .prompt = msg, .buttons = prompy_ok_btns, .selected_button = 0
     };
     prompt_init(&data);
-    free(data.res);
+    NC_ASSERT_VAL(data.textbox.str, NULL);
 }
 
 static const char *prompt_overwrite_btns[] = {

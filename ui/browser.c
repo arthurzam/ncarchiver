@@ -178,10 +178,9 @@ static int browse_key(int index, int ch) {
                 if (newArc)
                     break;
             }
-            char *path = (char *)malloc(2 + strlen(options->location) + strlen(options->filename));
-            strcpy(path, options->location);
-            strcat(path, "/");
-            strcat(path, options->filename);
+            NC_ASSERT_NONNULL(options->location);
+            NC_ASSERT_NONNULL(options->filename);
+            char *path = strconcat(options->location, options->filename, '/');
             newArc->format->openArchive(newArc, path);
             free(path);
             newArc->format->addFiles(newArc, files, options);

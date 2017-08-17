@@ -223,7 +223,7 @@ void draw_label(int row, int col, const char *text, bool flag) {
 int ui_insert(ui_draw_func_t draw, ui_key_func_t key, void *data) {
     int i;
     for (i = 0; ui_draw_funcs[i] != NULL; ++i)
-        NC_ASSERT_RANGE(i, 0, UI_MAX_DEPTH - 1);
+        NC_ASSERT(i < UI_MAX_DEPTH, "Number of windows is to big. Increase UI_MAX_DEPTH");
     ui_draw_funcs[i] = draw;
     ui_data[i] = data;
     ui_key_funcs[i] = key;
