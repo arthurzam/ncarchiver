@@ -11,9 +11,9 @@
 
 struct prompt_t {
     struct textbox_data_t textbox;
-    const char *title;
-    const char *prompt;
-    const char *const *buttons;
+    const char *const title;
+    const char *const prompt;
+    const char *const *const buttons;
     unsigned selected_button;
 };
 
@@ -116,7 +116,7 @@ int prompt_msgbox(const char *title, const char *msg, const char *const *buttons
     return data.selected_button;
 }
 
-static const char *const prompy_yesno_btns[] = {
+static const char *const prompt_yesno_btns[] = {
     "y"  "(Y)es",
     "\x1""(N)o",
     NULL
@@ -125,14 +125,14 @@ static const char *const prompy_yesno_btns[] = {
 bool prompt_yesno(const char *title, const char *msg, int width) {
     struct prompt_t data = {
         .textbox = TEXTBOX_INIT_EMPTY(NULL, width - 4), .title = title,
-        .prompt = msg, .buttons = prompy_yesno_btns, .selected_button = 0
+        .prompt = msg, .buttons = prompt_yesno_btns, .selected_button = 0
     };
     prompt_init(&data);
     NC_ASSERT_VAL(data.textbox.str, NULL);
     return data.selected_button == 0;
 }
 
-static const char *const prompy_ok_btns[] = {
+static const char *const prompt_ok_btns[] = {
     "\x1""OK",
     NULL
 };
@@ -140,7 +140,7 @@ static const char *const prompy_ok_btns[] = {
 void prompt_ok(const char *title, const char *msg, int width) {
     struct prompt_t data = {
         .textbox = TEXTBOX_INIT_EMPTY(NULL, width - 4), .title = title,
-        .prompt = msg, .buttons = prompy_ok_btns, .selected_button = 0
+        .prompt = msg, .buttons = prompt_ok_btns, .selected_button = 0
     };
     prompt_init(&data);
     NC_ASSERT_VAL(data.textbox.str, NULL);

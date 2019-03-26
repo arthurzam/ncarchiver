@@ -16,13 +16,16 @@ static struct {
 } types = {NULL, NULL, 0};
 
 struct newfiledialog_t {
-    struct compression_options_t options;
-    unsigned selected_row;
-    unsigned selected_type;
-    unsigned size;
+    const struct mime_type_t *mime;
     struct textbox_data_t tb_location;
     struct textbox_data_t tb_filename;
     struct textbox_data_t tb_password;
+
+    bool encryptHeaders;
+    unsigned selected_row;
+    unsigned selected_type;
+    unsigned size;
+    int8_t compressionLevel, compressionMethod, encryptionMethod;
 };
 
 static int _qsort_strtype(const void *a, const void *b)
@@ -133,54 +136,48 @@ static int newfiledialog_key(int index, int key) {
             return newfiledialog_key(index, KEY_UP);
         case KEY_RETURN:
         case KEY_ENTER:
-            if (data->selected_row <= ROW_CANCEL)
+            if (data->selected_row == ROW_CANCEL)
                 return 1;
-            if (data->selected_row == ROW_TYPE)
-            {
+            else if (data->selected_row == ROW_OK) {
+                // TODO: check input
+                return 1;
+            }
+            // fallthrough
+        case KEY_SPACE:
+            if (data->selected_row == ROW_TYPE) {
                 unsigned prev = data->selected_type;
                 data->selected_type = prompt_list_init("Archive Type", types.names, data->selected_type);
-                if (prev != data->selected_type)
-                {
-                    data->options.mime = mime = types.mimes[data->selected_type];
-                    data->options.compressionLevel = mime->compressionLevelDefault;
-                    data->options.compressionMethod = mime->compressionMethodDefault;
-                    data->options.encryptionMethod = mime->encryptionMethodDefault;
+                if (prev != data->selected_type) {
+                    data->mime = mime = types.mimes[data->selected_type];
+                    data->compressionLevel = mime->compressionLevelDefault;
+                    data->compressionMethod = mime->compressionMethodDefault;
+                    data->encryptionMethod = mime->encryptionMethodDefault;
                     data->size = _newfiledialog_mimeSize(mime);
                 }
-            }
-            else if (data->selected_row == ROW_COMPR_METHOD)
-                data->options.compressionMethod = prompt_list_init("Compression Method", types.mimes[data->selected_type]->compressionMethods, data->options.compressionMethod);
+            } else if (data->selected_row == ROW_COMPR_METHOD)
+                data->compressionMethod = prompt_list_init("Compression Method", mime->compressionMethods, data->compressionMethod);
             else if (data->selected_row == ROW_ENCR_METHOD)
-                data->options.encryptionMethod = prompt_list_init("Encryption Method", types.mimes[data->selected_type]->encryptionMethods, data->options.encryptionMethod);
-            else if (data->selected_row == ROW_LOCATION)
-            {
-                char *res = fselect_init(data->options.location, FSELECT_DIRS_ONLY);
-                free(data->options.location);
-                data->options.location = res;
-            }
-            else if (data->selected_row == ROW_ENCR_HDR)
-                data->options.encryptHeaders = !data->options.encryptHeaders;
+                data->encryptionMethod = prompt_list_init("Encryption Method", mime->encryptionMethods, data->encryptionMethod);
+            else if (data->selected_row == ROW_LOCATION) {
+                char *res = fselect_init(data->tb_location.str, FSELECT_DIRS_ONLY);
+                textbox_init(&data->tb_location, res, isprint, data->tb_location.width);
+                free(res);
+            } else if (data->selected_row == ROW_ENCR_HDR)
+                data->encryptHeaders = !data->encryptHeaders;
             return 0;
-        case KEY_SPACE:
-            if (data->selected_row == ROW_ENCR_HDR)
-            {
-                data->options.encryptHeaders = !data->options.encryptHeaders;
-                return 0;
-            }
-            break;
         case '+':
             if (data->selected_row == ROW_COMPR_LEVEL)
             {
-                if (data->options.compressionLevel < types.mimes[data->selected_type]->compressionLevelMax)
-                    ++data->options.compressionLevel;
+                if (data->compressionLevel < mime->compressionLevelMax)
+                    ++data->compressionLevel;
                 return 0;
             }
             break;
         case '-':
             if (data->selected_row == ROW_COMPR_LEVEL)
             {
-                if (data->options.compressionLevel > types.mimes[data->selected_type]->compressionLevelMin)
-                    --data->options.compressionLevel;
+                if (data->compressionLevel > mime->compressionLevelMin)
+                    --data->compressionLevel;
                 return 0;
             }
             break;
@@ -214,15 +211,15 @@ static void newfiledialog_draw(int index) {
         if (mime->compressionMethods)
         {
             draw_label(row, 4, "Method:", data->selected_row == ROW_COMPR_METHOD);
-            ncaddstr  (row++, 14, mime->compressionMethods[data->options.compressionMethod]);
+            ncaddstr  (row++, 14, mime->compressionMethods[data->compressionMethod]);
         }
         if (mime->compressionLevelMin != -1 || mime->compressionLevelMax != -1)
         {
             draw_label(row, 4, "Level:", data->selected_row == ROW_COMPR_LEVEL);
             ncprint   (row++, 14, "%d [%-*s%c%-*s] %d",
-                        mime->compressionLevelMin, data->options.compressionLevel - mime->compressionLevelMin, "",
-                        '0' + data->options.compressionLevel,
-                        mime->compressionLevelMax - data->options.compressionLevel, "", mime->compressionLevelMax);
+                        mime->compressionLevelMin, data->compressionLevel - mime->compressionLevelMin, "",
+                        '0' + data->compressionLevel,
+                        mime->compressionLevelMax - data->compressionLevel, "", mime->compressionLevelMax);
         }
     }
 
@@ -231,14 +228,14 @@ static void newfiledialog_draw(int index) {
         row++;
         ncaddstr(row++, 2, "Encryption");
         draw_label(row, 4, "Method:", data->selected_row == ROW_ENCR_METHOD);
-        ncaddstr  (row++, 14, mime->encryptionMethods[data->options.encryptionMethod]);
+        ncaddstr  (row++, 14, mime->encryptionMethods[data->encryptionMethod]);
 
         draw_label  (row, 4, "Password:", data->selected_row == ROW_ENCR_PASS);
         textbox_draw(&data->tb_password, row++, 14, (data->selected_row == ROW_ENCR_PASS ? TEXTBOX_SELECTED : 0) | TEXTBOX_HIDE);
 
         if (data->selected_row == ROW_ENCR_HDR)
             attron(A_REVERSE);
-        ncprint (row++, 4, "[%c] Encrypt Headers", data->options.encryptHeaders ? 'X' : ' ');
+        ncprint (row++, 4, "[%c] Encrypt Headers", data->encryptHeaders ? 'X' : ' ');
         if (data->selected_row == ROW_ENCR_HDR)
             attroff(A_REVERSE);
     }
@@ -253,26 +250,36 @@ struct compression_options_t *newfiledialog_init() {
     if (!types.names)
         _newfiledialog_setTypes();
     const struct mime_type_t *mime = types.mimes[0];
-    struct newfiledialog_t *data = TYPE_MALLOC(struct newfiledialog_t);
-    memset(data, 0, sizeof(struct newfiledialog_t));
-    textbox_init(&data->tb_location, getHomeDir(), isprint, WINDOW_WIDTH - 14);
-    textbox_init(&data->tb_filename, NULL, isprint, WINDOW_WIDTH - 14);
-    textbox_init(&data->tb_password, NULL, isprint, WINDOW_WIDTH - 16);
-    data->options.compressionLevel = mime->compressionLevelDefault;
-    data->options.compressionMethod = mime->compressionMethodDefault;
-    data->options.encryptionMethod = mime->encryptionMethodDefault;
-    data->size = _newfiledialog_mimeSize(mime);
-    data->options.mime = mime;
 
-    ui_insert(newfiledialog_draw, newfiledialog_key, data);
+    struct newfiledialog_t data = {
+        .size = _newfiledialog_mimeSize(mime), .tb_location = TEXTBOX_INIT_NULL,
+        .tb_filename = TEXTBOX_INIT_EMPTY(isprint, WINDOW_WIDTH - 14),
+        .tb_password = TEXTBOX_INIT_EMPTY(isprint, WINDOW_WIDTH - 16),
+        .mime = mime, .compressionLevel = mime->compressionLevelDefault,
+        .compressionMethod = mime->compressionMethodDefault, .encryptionMethod = mime->encryptionMethodDefault,
+    };
+    textbox_init(&data.tb_location, getHomeDir(), isprint, WINDOW_WIDTH - 14);
+
+    ui_insert(newfiledialog_draw, newfiledialog_key, &data);
     while (input_handle(0) != 1);
     ui_remove();
 
-    if (data->selected_row == ROW_CANCEL)
+    if (data.selected_row == ROW_CANCEL)
     {
-        free(data);
+        free(data.tb_location.str);
+        free(data.tb_filename.str);
+        free(data.tb_password.str);
         return NULL;
     }
 
-    return &data->options;
+    struct compression_options_t *result = TYPE_MALLOC(struct compression_options_t);
+    NC_ASSERT_NONNULL(result);
+    *result = (struct compression_options_t) {
+        .password = data.tb_password.str, .filename = data.tb_filename.str,
+        .location = data.tb_location.str, .mime = data.mime,
+        .encryptHeaders = data.encryptHeaders, .compressionLevel = data.compressionLevel,
+        .compressionMethod = data.compressionMethod, .encryptionMethod = data.encryptionMethod
+    };
+
+    return result;
 }

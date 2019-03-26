@@ -189,7 +189,7 @@ bool cli_7z_addFiles(struct archive_t *_archive, const char *const *files, const
 static const struct mime_type_t _7z_mimes_rw[] = {
     {   MIME_TYPE_FULL_NAME("application/x-7z-compressed", "7z", "7-zip archive"),
         MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
-        MIME_TYPE_ENCRYPTION_NO,
+        MIME_TYPE_ENCRYPTION_VAL(STRING_ARR("AES256"), 0),
         MIME_TYPE_COMPRESSION_MET_VAL(STRING_ARR("BZip2", "Copy", "Deflate", "LZMA", "LZMA2", "PPMd"), 4)
     }, {MIME_TYPE_FULL_NAME("application/zip", "zip", "Zip archive"),
         MIME_TYPE_COMPRESSION_VAL(0, 5, 9),
